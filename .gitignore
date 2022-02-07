@@ -31,3 +31,7 @@ assets_vfsdata.go
 *.swp
 
 dist/
+/.idea/.gitignore
+/.idea/gohttpserver.iml
+/.idea/modules.xml
+/.idea/vcs.xml

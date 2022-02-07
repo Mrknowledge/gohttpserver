@@ -596,9 +596,19 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	////ken: order by file name
+	//keys := make([]string, 0, len(fileInfoMap))
+	//for k := range fileInfoMap {
+	//	keys = append(keys, k)
+	//}
+	//sort.Strings(keys)
+
 	// turn file list -> json
 	lrs := make([]HTTPFileInfo, 0)
+	//ken:
 	for path, info := range fileInfoMap {
+		//for _, path := range keys {
+		fmt.Println("==", path)
 		if !auth.canAccess(info.Name()) {
 			continue
 		}

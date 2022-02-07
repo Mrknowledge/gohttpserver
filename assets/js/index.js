@@ -65,6 +65,8 @@ var vm = new Vue({
       type: "dir",
     }],
     myDropzone: null,
+    nameSort: true,
+    timeSort: true
   },
   computed: {
     computedFiles: function () {
@@ -134,13 +136,31 @@ var vm = new Vue({
           // console.log("File progress", progress);
         });
         this.on("complete", function (file) {
-          console.log("reload file list")
+          //console.log("reload file list")
           loadFileList()
         })
       }
     });
   },
   methods: {
+    nameSortFunc: function(){
+      this.nameSort = !this.nameSort;
+      if (this.nameSort) {
+        this.files = _.sortBy(this.files, 'name')
+      }else{
+        this.files = _.sortBy(this.files, 'name').reverse()
+      }
+      console.log(this.files)
+      
+    },
+    timeSortFunc: function(){
+      this.timeSort = !this.timeSort;
+      if (this.timeSort) {
+        this.files = _.sortBy(this.files, 'mtime')
+      }else{
+        this.files = _.sortBy(this.files, 'mtime').reverse()
+      }
+    },
     getEncodePath: function (f) {
       return pathJoin([location.pathname, encodeURIComponent(f.name)]);
     },

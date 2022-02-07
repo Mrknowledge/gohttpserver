@@ -118,10 +118,10 @@
             </td>
           </tr>
           <tr>
-            <th>Name</th>
+            <th style="cursor: pointer" v-on:click='nameSortFunc'>Name</th>
             <th>Size</th>
             <th class="hidden-xs">
-              <span style="cursor: pointer" v-on:click='mtimeTypeFromNow = !mtimeTypeFromNow'>ModTime</span>
+              <span style="cursor: pointer" v-on:click='timeSortFunc'>ModTime</span>
             </th>
             <th>Actions</th>
           </tr>
@@ -256,7 +256,7 @@
     </div>
     <div class="col-md-12">
       <div id="footer" class="pull-right" style="margin: 2em 1em">
-        <a href="https://github.com/codeskyblue/gohttpserver">gohttpserver ({{version}})</a>, by <a href="https://github.com/codeskyblue">codeskyblue</a>.
+        <!--a href="https://github.com/codeskyblue/gohttpserver">gohttpserver ({{version}})</a>, by <a href="https://github.com/codeskyblue">codeskyblue</a-->.
       </div>
     </div>
   </div>
