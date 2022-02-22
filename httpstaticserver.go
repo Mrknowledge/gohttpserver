@@ -608,7 +608,7 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 	//ken:
 	for path, info := range fileInfoMap {
 		//for _, path := range keys {
-		fmt.Println("==", path)
+		//fmt.Println("==", path)
 		if !auth.canAccess(info.Name()) {
 			continue
 		}
