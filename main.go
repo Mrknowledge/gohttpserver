@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"github.com/goji/httpauth"
 	"io/ioutil"
 	"log"
 	"net"
@@ -19,7 +22,6 @@ import (
 	"github.com/alecthomas/kingpin"
 	accesslog "github.com/codeskyblue/go-accesslog"
 	"github.com/go-yaml/yaml"
-	"github.com/goji/httpauth"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -148,6 +150,61 @@ func fixPrefix(prefix string) string {
 	return prefix
 }
 
+type Users struct {
+	User []User `yaml:"users"`
+}
+type User map[string]string
+
+//func myAuthFunc(user, pass string, r *http.Request) bool {
+//	return pass == strings.Repeat(user, 3)
+//}
+func mySimpleBasicAuthFunc(user, pass string, r *http.Request) bool {
+	// Equalize lengths of supplied and required credentials
+	// by hashing them
+	givenUser := sha256.Sum256([]byte(user))
+	givenPass := sha256.Sum256([]byte(pass))
+	//requiredUser := sha256.Sum256([]byte("aa"))
+	//requiredPass := sha256.Sum256([]byte("bb"))
+
+	//cfgFile := filepath.Join(realPath, ".user.yml")
+	cfgFile := ".user.yml"
+	data, err := ioutil.ReadFile(cfgFile)
+	if err != nil {
+		//if os.IsNotExist(err) {
+		//	return false
+		//}
+		log.Printf("Err read .user.yml: %v", err)
+	}
+	users := Users{}
+	err = yaml.Unmarshal(data, &users)
+	if err != nil {
+		log.Printf("Err format .user.yml: %v", err)
+	}
+	//
+	for _, v := range users.User {
+		//log.Println("==", k, v)
+		for k1, v1 := range v {
+			//log.Println("====", k1, v1)
+			requiredUser := sha256.Sum256([]byte(k1))
+			requiredPass := sha256.Sum256([]byte(v1))
+			// Compare the supplied credentials to those set in our options
+			if subtle.ConstantTimeCompare(givenUser[:], requiredUser[:]) == 1 &&
+				subtle.ConstantTimeCompare(givenPass[:], requiredPass[:]) == 1 {
+				return true
+			}
+		}
+
+	}
+
+	//// Compare the supplied credentials to those set in our options
+	//if subtle.ConstantTimeCompare(givenUser[:], requiredUser[:]) == 1 &&
+	//	subtle.ConstantTimeCompare(givenPass[:], requiredPass[:]) == 1 {
+	//	return true
+	//}
+
+	return false
+}
+
 func main() {
 	if err := parseFlags(); err != nil {
 		log.Fatal(err)
@@ -190,13 +247,19 @@ func main() {
 	hdlr = accesslog.NewLoggingHandler(hdlr, logger)
 
 	// HTTP Basic Authentication
-	userpass := strings.SplitN(gcfg.Auth.HTTP, ":", 2)
+	//userpass := strings.SplitN(gcfg.Auth.HTTP, ":", 2)
 	switch gcfg.Auth.Type {
 	case "http":
-		if len(userpass) == 2 {
-			user, pass := userpass[0], userpass[1]
-			hdlr = httpauth.SimpleBasicAuth(user, pass)(hdlr)
+		//if len(userpass) == 2 {
+		//	user, pass := userpass[0], userpass[1]
+		//	hdlr = httpauth.SimpleBasicAuth(user, pass)(hdlr)
+		//}
+		opts := httpauth.AuthOptions{
+			Realm:    "Restricted",
+			AuthFunc: mySimpleBasicAuthFunc,
+			//UnauthorizedHandler: myUnauthorizedHandler,
 		}
+		hdlr = httpauth.BasicAuth(opts)(hdlr)
 	case "openid":
 		handleOpenID(gcfg.Auth.OpenID, false) // FIXME(ssx): set secure default to false
 		// case "github":

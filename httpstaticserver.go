@@ -147,6 +147,29 @@ func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "HEAD" {
 			return
 		}
+
+		//ken add
+		if gcfg.Auth.Type == "http" {
+			username, _, ok := r.BasicAuth()
+			if ok {
+				session, err := store.Get(r, defaultSessionName)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				user := &UserInfo{
+					Id:       username,
+					Email:    username,
+					Name:     username,
+					NickName: username,
+				}
+				session.Values["user"] = user
+				if err := session.Save(r, w); err != nil {
+					log.Println("session save error:", err)
+				}
+			}
+		}
+
 		renderHTML(w, "assets/index.html", s)
 	} else {
 		if filepath.Base(path) == YAMLCONF {
