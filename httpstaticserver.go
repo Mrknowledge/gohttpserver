@@ -102,6 +102,7 @@ func NewHTTPStaticServer(root string) *HTTPStaticServer {
 	m.HandleFunc("/{path:.*}", s.hIndex).Methods("GET", "HEAD")
 	m.HandleFunc("/{path:.*}", s.hUploadOrMkdir).Methods("POST")
 	m.HandleFunc("/{path:.*}", s.hDelete).Methods("DELETE")
+	m.HandleFunc("/{path:.*}", s.hRename).Methods("PUT")
 	return s
 }
 
@@ -207,6 +208,95 @@ func (s *HTTPStaticServer) hDelete(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
+
+	//ken add method1
+	user, _, hasAuth := req.BasicAuth()
+	if hasAuth && len(user) > 0 {
+		log.Println(user, "- Removed file:", path)
+	} else {
+		log.Println("Removed file:", path)
+	}
+	//ken add method2
+	//session, err := store.Get(req, defaultSessionName)
+	//if err != nil {
+	//	log.Println("Get session info err:", err)
+	//	log.Println("Removed file:", path)
+	//} else {
+	//	val := session.Values["user"]
+	//	if val == nil {
+	//		log.Println("Get user info null")
+	//		log.Println("Removed file:", path)
+	//	} else {
+	//		userInfo := val.(*UserInfo)
+	//		log.Println(userInfo.Name, "- Removed file:", path)
+	//	}
+	//}
+
+	w.Write([]byte("Success"))
+}
+
+//ken add 20220814
+func (s *HTTPStaticServer) hRename(w http.ResponseWriter, req *http.Request) {
+	//path := mux.Vars(req)["path"]
+	realPath := s.getRealPath(req)
+	// path = filepath.Clean(path) // for safe reason, prevent path contain ..
+	auth := s.readAccessConf(realPath)
+	if !auth.canDelete(req) {
+		http.Error(w, "Rename forbidden", http.StatusForbidden)
+		return
+	}
+
+	// TODO: path safe check
+	filename := req.FormValue("filename")
+	if filename == "" {
+		http.Error(w, "filename empty", http.StatusForbidden)
+		return
+	}
+	if err := checkFilename(filename); err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	dstPath := filepath.Join(filepath.Dir(realPath), filename)
+	//check dest file exist
+	isExist, err := PathExists(dstPath)
+	if isExist || err != nil {
+		if err != nil {
+			http.Error(w, "Check destination file "+dstPath+" failed, err: "+err.Error(), http.StatusInternalServerError)
+		} else {
+			http.Error(w, "Destination file "+dstPath+" existed", http.StatusInternalServerError)
+		}
+		return
+	}
+	//rename
+	err = os.Rename(realPath, dstPath)
+	if err != nil {
+		http.Error(w, "Rename file "+realPath+" to "+dstPath+" err: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//ken add method1
+	user, _, hasAuth := req.BasicAuth()
+	if hasAuth && len(user) > 0 {
+		log.Println(user, "- Renamed file", realPath, "to", dstPath)
+	} else {
+		log.Println("Renamed file", realPath, "to", dstPath)
+	}
+	//ken add method2
+	//session, err := store.Get(req, defaultSessionName)
+	//if err != nil {
+	//	log.Println("Get session info err:", err)
+	//	log.Println("Removed directory:", path)
+	//} else {
+	//	val := session.Values["user"]
+	//	if val == nil {
+	//		log.Println("Get user info null")
+	//		log.Println("Removed directory:", path)
+	//	} else {
+	//		userInfo := val.(*UserInfo)
+	//		log.Println(userInfo.Name, "- Removed directory:", path)
+	//	}
+	//}
+
 	w.Write([]byte("Success"))
 }
 
@@ -311,6 +401,14 @@ func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, req *http.Reque
 		"success":     true,
 		"destination": dstPath,
 	})
+
+	//ken add method1
+	user, _, hasAuth := req.BasicAuth()
+	if hasAuth && len(user) > 0 {
+		log.Println(user, "- Create file:", filename)
+	} else {
+		log.Println("Create file:", filename)
+	}
 }
 
 type FileJSONInfo struct {
@@ -843,4 +941,17 @@ func checkFilename(name string) error {
 		return errors.New("Name should not contains \\/:*<>|")
 	}
 	return nil
+}
+
+// PathExists ken add 判断所给路径文件/文件夹是否存在
+func PathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	//isnotexist来判断，是不是不存在的错误
+	if os.IsNotExist(err) { //如果返回的错误类型使用os.isNotExist()判断为true，说明文件或者文件夹不存在
+		return false, nil
+	}
+	return false, err //如果有错误了，但是不是不存在的错误，所以把这个错误原封不动的返回
 }
