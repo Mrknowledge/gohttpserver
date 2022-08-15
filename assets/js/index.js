@@ -40,6 +40,8 @@ function showErrorMessage(jqXHR) {
 var vm = new Vue({
   el: "#app",
   data: {
+    currentFileName:'',
+    editFileName:'',
     user: {
       email: "",
       name: "",
@@ -288,6 +290,28 @@ var vm = new Vue({
           showErrorMessage(jqXHR)
         }
       })
+    },
+    showEditURL: function (f) {
+      console.log(f);
+      this.currentFileName = f.name;
+      this.editFileName = f.name;
+      $("#edit-modal").modal("show");
+    },
+    genEditURL: function (){
+      $.ajax({
+        url: pathJoin([location.pathname, encodeURIComponent(this.currentFileName)]),
+        method: 'PUT',
+        data: {
+          filename: this.editFileName
+        },
+        success: function (res) {
+          loadFileList()
+          $("#edit-modal").modal("hide");
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+          showErrorMessage(jqXHR)
+        }
+      });
     },
     makeDirectory: function () {
       var name = window.prompt("current path: " + location.pathname + "\nplease enter the new directory name", "")

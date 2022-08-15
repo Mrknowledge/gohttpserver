@@ -158,6 +158,10 @@
                   <span class="hidden-xs">Download</span>
                   <span class="glyphicon glyphicon-download-alt"></span>
                 </a>
+                <a class="btn btn-default btn-xs hidden-xs" v-on:click="showEditURL(f)" v-if="auth.delete">
+                  <span class="hidden-xs">Edit</span>
+                  <span class="glyphicon glyphicon-edit"></span>
+                </a>
                 <button class="btn btn-default btn-xs bstooltip" data-trigger="manual" data-title="Copied!"
                   data-clipboard-text="{{genDownloadURL(f)}}">
                   <i class="fa fa-copy"></i>
@@ -253,6 +257,27 @@
           </div>
         </div>
       </div>
+
+      <!-- edit modal -->
+      <div id="edit-modal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title">
+                <span>{{currentFileName}}</span>
+              </h4>
+            </div>
+            <div class="modal-body">
+              <input v-model='editFileName' style="width:100%"/>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" @click="genEditURL">Confirm</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
     <div class="col-md-12">
       <div id="footer" class="pull-right" style="margin: 2em 1em">
