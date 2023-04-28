@@ -38,6 +38,7 @@ type Configure struct {
 	Cors            bool     `yaml:"cors"`
 	Theme           string   `yaml:"theme"`
 	XHeaders        bool     `yaml:"xheaders"`
+	Show            bool     `yaml:"show"`
 	Upload          bool     `yaml:"upload"`
 	Delete          bool     `yaml:"delete"`
 	PlistProxy      string   `yaml:"plistproxy"`
@@ -115,6 +116,7 @@ func parseFlags() error {
 	kingpin.Flag("auth-http", "HTTP basic auth (ex: user:pass)").StringVar(&gcfg.Auth.HTTP)
 	kingpin.Flag("auth-openid", "OpenID auth identity url").StringVar(&gcfg.Auth.OpenID)
 	kingpin.Flag("theme", "web theme, one of <black|green>").StringVar(&gcfg.Theme)
+	kingpin.Flag("show", "enable show support").BoolVar(&gcfg.Show)
 	kingpin.Flag("upload", "enable upload support").BoolVar(&gcfg.Upload)
 	kingpin.Flag("delete", "enable delete support").BoolVar(&gcfg.Delete)
 	kingpin.Flag("xheaders", "used when behide nginx").BoolVar(&gcfg.XHeaders)

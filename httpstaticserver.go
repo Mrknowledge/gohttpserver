@@ -50,6 +50,7 @@ type Directory struct {
 type HTTPStaticServer struct {
 	Root            string
 	Prefix          string
+	Show            bool
 	Upload          bool
 	Delete          bool
 	Title           string
@@ -603,12 +604,14 @@ type AccessTable struct {
 type UserControl struct {
 	Email string
 	// Access bool
+	Show   bool
 	Upload bool
 	Delete bool
 	Token  string
 }
 
 type AccessConf struct {
+	Show         bool          `yaml:"show" json:"show"`
 	Upload       bool          `yaml:"upload" json:"upload"`
 	Delete       bool          `yaml:"delete" json:"delete"`
 	Users        []UserControl `yaml:"users" json:"users"`
@@ -616,6 +619,25 @@ type AccessConf struct {
 }
 
 var reCache = make(map[string]*regexp.Regexp)
+
+// 20230428 增加一个用于管理用户可展示目录的功能
+func (c *AccessConf) canShow(r *http.Request) bool {
+	session, err := store.Get(r, defaultSessionName)
+	if err != nil {
+		return c.Show
+	}
+	val := session.Values["user"]
+	if val == nil {
+		return c.Show
+	}
+	userInfo := val.(*UserInfo)
+	for _, rule := range c.Users {
+		if rule.Email == userInfo.Email {
+			return rule.Show
+		}
+	}
+	return c.Show
+}
 
 func (c *AccessConf) canAccess(fileName string) bool {
 	for _, table := range c.AccessTables {
@@ -692,6 +714,7 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 	auth := s.readAccessConf(realPath)
 	auth.Upload = auth.canUpload(r)
 	auth.Delete = auth.canDelete(r)
+	auth.Show = auth.canShow(r)
 
 	// path string -> info os.FileInfo
 	fileInfoMap := make(map[string]os.FileInfo, 0)
@@ -730,7 +753,10 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 	for path, info := range fileInfoMap {
 		//for _, path := range keys {
 		//fmt.Println("==", path)
-		if !auth.canAccess(info.Name()) {
+		if !auth.canShow(r) { //无权访问的用户
+			continue
+		}
+		if !auth.canAccess(info.Name()) { //需要隐藏的文件
 			continue
 		}
 		lr := HTTPFileInfo{
@@ -841,6 +867,7 @@ func (s *HTTPStaticServer) defaultAccessConf() AccessConf {
 	return AccessConf{
 		Upload: s.Upload,
 		Delete: s.Delete,
+		Show:   s.Show,
 	}
 }
 
