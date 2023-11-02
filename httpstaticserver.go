@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	//"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -111,7 +113,7 @@ func (s *HTTPStaticServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.m.ServeHTTP(w, r)
 }
 
-// Return real path with Seperator(/)
+// Return real path with Separator(/)
 func (s *HTTPStaticServer) getRealPath(r *http.Request) string {
 	path := mux.Vars(r)["path"]
 	if !strings.HasPrefix(path, "/") {
@@ -136,6 +138,12 @@ func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("op") == "info" {
 		s.hInfo(w, r)
+		return
+	}
+
+	//ken add 20231102
+	if r.FormValue("op") == "conf" {
+		s.hConf(w, r)
 		return
 	}
 
@@ -183,6 +191,9 @@ func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 		}
 		if r.FormValue("download") == "true" {
 			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(filepath.Base(path)))
+			//ken add 20231024
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Pragma", "no-cache")
 		}
 		http.ServeFile(w, r, realPath)
 	}
@@ -250,7 +261,30 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, req *http.Request) {
 	// TODO: path safe check
 	filename := req.FormValue("filename")
 	if filename == "" {
-		http.Error(w, "filename empty", http.StatusForbidden)
+		//ken add 20231101
+		op := req.FormValue("op")
+		content := req.FormValue("content")
+		if op == "conf" && content != "" {
+			decodedContent, err := base64.StdEncoding.DecodeString(content)
+			if err != nil {
+				http.Error(w, "content decode failed", http.StatusBadRequest)
+				return
+			}
+			if req.FormValue("type") == "user" {
+				if !s.saveUserConf(decodedContent) {
+					http.Error(w, "save content failed", http.StatusInternalServerError)
+					return
+				}
+			} else {
+				if !s.saveAccessConf(realPath, decodedContent) {
+					http.Error(w, "save content failed", http.StatusInternalServerError)
+					return
+				}
+			}
+			w.Write([]byte("save config success"))
+		} else {
+			http.Error(w, "filename empty", http.StatusForbidden)
+		}
 		return
 	}
 	if err := checkFilename(filename); err != nil {
@@ -428,15 +462,15 @@ func parseApkInfo(path string) (ai *ApkInfo) {
 			log.Println("parse-apk-info panic:", err)
 		}
 	}()
-	apkf, err := apk.OpenFile(path)
+	apkInfo, err := apk.OpenFile(path)
 	if err != nil {
 		return
 	}
 	ai = &ApkInfo{}
-	ai.MainActivity, _ = apkf.MainActivity()
-	ai.PackageName = apkf.PackageName()
-	ai.Version.Code = apkf.Manifest().VersionCode
-	ai.Version.Name = apkf.Manifest().VersionName
+	ai.MainActivity, _ = apkInfo.MainActivity()
+	ai.PackageName = apkInfo.PackageName()
+	ai.Version.Code = apkInfo.Manifest().VersionCode
+	ai.Version.Name = apkInfo.Manifest().VersionName
 	return
 }
 
@@ -469,6 +503,34 @@ func (s *HTTPStaticServer) hInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	data, _ := json.Marshal(fji)
 	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
+}
+
+//ken add 20231102
+func (s *HTTPStaticServer) hConf(w http.ResponseWriter, r *http.Request) {
+	//path := mux.Vars(req)["path"]
+	realPath := s.getRealPath(r)
+	// path = filepath.Clean(path) // for safe reason, prevent path contain ..
+	auth := s.readAccessConf(realPath)
+	if !auth.canDelete(r) {
+		http.Error(w, "Read conf forbidden", http.StatusForbidden)
+		return
+	}
+
+	var data []byte
+	if r.FormValue("type") == "user" {
+		user := s.readUserConf()
+		//mask user password
+		for _, u := range user.User {
+			for k := range u {
+				u[k] = "******"
+			}
+		}
+		data, _ = yaml.Marshal(user)
+	} else {
+		data, _ = yaml.Marshal(auth)
+	}
+	w.Header().Set("Content-Type", "application/x-yaml")
 	w.Write(data)
 }
 
@@ -544,7 +606,7 @@ func (s *HTTPStaticServer) hIpaLink(w http.ResponseWriter, r *http.Request) {
 		}
 		plistUrl = url
 	} else {
-		http.Error(w, "500: Server should be https:// or provide valid plistproxy", 500)
+		http.Error(w, "500: Server should be https:// or provide valid plist proxy", 500)
 		return
 	}
 
@@ -824,9 +886,9 @@ func (s *HTTPStaticServer) historyDirSize(dir string) int64 {
 		return size
 	}
 
-	for _, fitem := range s.indexes {
-		if filepath.HasPrefix(fitem.Path, dir) {
-			size += fitem.Info.Size()
+	for _, fItem := range s.indexes {
+		if filepath.HasPrefix(fItem.Path, dir) {
+			size += fItem.Info.Size()
 		}
 	}
 
@@ -898,16 +960,107 @@ func (s *HTTPStaticServer) readAccessConf(realPath string) (ac AccessConf) {
 	return
 }
 
+//ken add 20231102
+func (s *HTTPStaticServer) readUserConf() (uc Users) {
+	cfgFile := filepath.Join(s.Root, ".user.yml")
+	data, err := ioutil.ReadFile(cfgFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
+		log.Printf("Err read .user.yml: %v", err)
+	}
+	err = yaml.Unmarshal(data, &uc)
+	if err != nil {
+		log.Printf("Err format .user.yml: %v", err)
+	}
+
+	return
+}
+
+//ken add 20231101
+func (s *HTTPStaticServer) saveAccessConf(realPath string, content []byte) bool {
+	var data AccessConf
+	err := yaml.Unmarshal([]byte(content), data)
+	if err != nil {
+		log.Printf("error parsing YMAL %s : %v", content, err)
+		return false
+	}
+
+	relativePath, err := filepath.Rel(s.Root, realPath)
+	if err != nil || relativePath == "." || relativePath == "" { // actually relativePath is always "." if root == realPath
+		realPath = s.Root
+	}
+	if isFile(realPath) {
+		realPath = filepath.Dir(realPath)
+	}
+	cfgFile := filepath.Join(realPath, YAMLCONF)
+
+	err = ioutil.WriteFile(cfgFile, []byte(content), 0644)
+	if err != nil {
+		log.Printf("error save YMAL %s : %v", content, err)
+		return false
+	}
+
+	log.Printf("save YMAL %s ok", content)
+	return true
+}
+
+//ken add 20231102
+func (s *HTTPStaticServer) saveUserConf(content []byte) bool {
+	var data Users
+	err := yaml.Unmarshal([]byte(content), data)
+	if err != nil {
+		log.Printf("error parsing YMAL %s : %v", content, err)
+		return false
+	}
+
+	//unmask user password
+	user := s.readUserConf()
+	for _, u := range data.User {
+		for k, v := range u {
+			if v == "******" {
+				//find old password
+				password := "******"
+				for _, uu := range user.User {
+					for kk, vv := range uu {
+						if kk == k {
+							password = vv
+						}
+					}
+				}
+				u[k] = password
+			}
+		}
+	}
+
+	cfgFile := filepath.Join(s.Root, ".user.yml")
+	//err = ioutil.WriteFile(cfgFile, []byte(content), 0644)
+	contentM, err := yaml.Marshal(&data)
+	if err != nil {
+		log.Printf("error marshal YMAL: %v", err)
+		return false
+	}
+	err = ioutil.WriteFile(cfgFile, contentM, 0644)
+	if err != nil {
+		log.Printf("error save YMAL %s : %v", contentM, err)
+		return false
+	}
+
+	log.Printf("save YMAL %s ok", contentM)
+	return true
+}
+
 func deepPath(basedir, name string) string {
-	// loop max 5, incase of for loop not finished
+	// loop max 5, in case of for loop not finished
 	maxDepth := 5
 	for depth := 0; depth <= maxDepth; depth += 1 {
-		finfos, err := ioutil.ReadDir(filepath.Join(basedir, name))
-		if err != nil || len(finfos) != 1 {
+		fInfos, err := ioutil.ReadDir(filepath.Join(basedir, name))
+		if err != nil || len(fInfos) != 1 {
 			break
 		}
-		if finfos[0].IsDir() {
-			name = filepath.ToSlash(filepath.Join(name, finfos[0].Name()))
+		if fInfos[0].IsDir() {
+			name = filepath.ToSlash(filepath.Join(name, fInfos[0].Name()))
 		} else {
 			break
 		}
@@ -927,7 +1080,7 @@ func assetsContent(name string) string {
 	return string(data)
 }
 
-// TODO: I need to read more abouthtml/template
+// TODO: I need to read more about html/template
 var (
 	funcMap template.FuncMap
 )
