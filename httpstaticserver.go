@@ -265,11 +265,13 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, req *http.Request) {
 		op := req.FormValue("op")
 		content := req.FormValue("content")
 		if op == "conf" && content != "" {
+			log.Println(content)
 			decodedContent, err := base64.StdEncoding.DecodeString(content)
 			if err != nil {
 				http.Error(w, "content decode failed", http.StatusBadRequest)
 				return
 			}
+			log.Println(string(decodedContent))
 			if req.FormValue("type") == "user" {
 				if !s.saveUserConf(decodedContent) {
 					http.Error(w, "save content failed", http.StatusInternalServerError)
@@ -981,7 +983,7 @@ func (s *HTTPStaticServer) readUserConf() (uc Users) {
 //ken add 20231101
 func (s *HTTPStaticServer) saveAccessConf(realPath string, content []byte) bool {
 	var data AccessConf
-	err := yaml.Unmarshal([]byte(content), data)
+	err := yaml.Unmarshal([]byte(content), &data)
 	if err != nil {
 		log.Printf("error parsing YMAL %s : %v", content, err)
 		return false
@@ -1009,7 +1011,7 @@ func (s *HTTPStaticServer) saveAccessConf(realPath string, content []byte) bool 
 //ken add 20231102
 func (s *HTTPStaticServer) saveUserConf(content []byte) bool {
 	var data Users
-	err := yaml.Unmarshal([]byte(content), data)
+	err := yaml.Unmarshal([]byte(content), &data)
 	if err != nil {
 		log.Printf("error parsing YMAL %s : %v", content, err)
 		return false
