@@ -183,6 +183,22 @@
                   >
                     New Folder <i class="fa fa-folder"></i>
                   </button>
+
+                  <button
+                    class="btn btn-xs btn-default"
+                    v-show="auth.delete"
+                    @click="viewConfig('user')"
+                  >
+                    User Config <i class="fa fa-user"></i>
+                  </button>
+
+                  <button
+                    class="btn btn-xs btn-default"
+                    v-show="auth.delete"
+                    @click="viewConfig('auth')"
+                  >
+                    Auth Config <i class="fa fa-gear"></i>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -453,6 +469,290 @@
             </div>
           </div>
         </div>
+
+        <!-- edit user modal -->
+        <div
+          id="edit-user-modal"
+          class="modal fade"
+          tabindex="-1"
+          role="dialog"
+        >
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button
+                  type="button"
+                  class="close"
+                  data-dismiss="modal"
+                  aria-label="Close"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">
+                  <span>View and edit user information</span>
+                </h4>
+              </div>
+              <div class="modal-body">
+                <div
+                  class="row"
+                  style="margin-bottom: 8px"
+                  v-for="item in userInfo"
+                >
+                  <div class="col-sm-4 bg-white">
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="item.name"
+                      placeholder="name"
+                    />
+                  </div>
+                  <div
+                    v-bind:class="`bg-white col-sm-${userInfo.length > 1 ? '7': '8'}`"
+                  >
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="item.password"
+                      placeholder="password"
+                    />
+                  </div>
+                  <div class="col-sm-1 bg-white" v-if="userInfo.length >1">
+                    <button type="button" @click="removeUserItem($index)">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    class="btn btn-link"
+                    @click="addUserItem"
+                  >
+                    <i class="glyphicon glyphicon-plus" aria-hidden="true"></i>
+                    add new item
+                  </button>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-default"
+                  @click="editUserInfo"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- edit auth modal -->
+        <div
+          id="edit-auth-modal"
+          class="modal fade"
+          tabindex="-1"
+          role="dialog"
+          aria-labelledby="myLargeModalLabel"
+        >
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <button
+                  type="button"
+                  class="close"
+                  data-dismiss="modal"
+                  aria-label="Close"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">
+                  <span>View and edit auth config</span>
+                </h4>
+              </div>
+              <div class="modal-body">
+                <div class="row" style="margin-bottom: 8px">
+                  <div class="col-sm-2 bg-white">show:</div>
+                  <div class="col-sm-9 bg-white">
+                    <select class="form-control" v-model="authInfo.show  ">
+                      <option v-bind:value="true">true</option>
+                      <option v-bind:value="false">false</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row" style="margin-bottom: 8px">
+                  <div class="col-sm-2 bg-white">upload:</div>
+                  <div class="col-sm-9 bg-white">
+                    <select class="form-control" v-model="authInfo.upload">
+                      <option v-bind:value="true">true</option>
+                      <option v-bind:value="false">false</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row" style="margin-bottom: 8px">
+                  <div class="col-sm-2 bg-white">delete:</div>
+                  <div class="col-sm-9 bg-white">
+                    <select class="form-control" v-model="authInfo.delete">
+                      <option v-bind:value="true">true</option>
+                      <option v-bind:value="false">false</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row" style="margin-bottom: 8px; margin-top: 8px">
+                  <div class="col-sm-2 bg-white">users:</div>
+                </div>
+                <div class="row">
+                  <div class="col-sm-3 bg-white">email</div>
+                  <div class="col-sm-5 bg-white">token</div>
+                  <div class="col-sm-1 bg-white" style="padding-left: 0">
+                    show
+                  </div>
+                  <div class="col-sm-1 bg-white" style="padding-left: 0">
+                    upload
+                  </div>
+                  <div class="col-sm-1 bg-white" style="padding-left: 0">
+                    delete
+                  </div>
+                </div>
+                <div
+                  class="row"
+                  style="margin-bottom: 8px"
+                  v-for="userItem in authInfo.users"
+                >
+                  <div class="col-sm-3 bg-white">
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="userItem.email"
+                      placeholder="email"
+                    />
+                  </div>
+                  <div class="col-sm-5 bg-white">
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="userItem.token"
+                      placeholder="token"
+                    />
+                  </div>
+                  <div class="col-sm-1 bg-white" style="padding-left: 0">
+                    <select
+                      class="form-control"
+                      v-model="userItem.show"
+                      placeholder="show"
+                      style="padding-left: 4px; padding-right: 4px"
+                    >
+                      <option v-bind:value="true">true</option>
+                      <option v-bind:value="false">false</option>
+                    </select>
+                  </div>
+                  <div class="col-sm-1 bg-white" style="padding-left: 0">
+                    <select
+                      class="form-control"
+                      v-model="userItem.upload"
+                      placeholder="upload"
+                      style="padding-left: 4px; padding-right: 4px"
+                    >
+                      <option v-bind:value="true">true</option>
+                      <option v-bind:value="false">false</option>
+                    </select>
+                  </div>
+                  <div class="col-sm-1 bg-white" style="padding-left: 0">
+                    <select
+                      class="form-control"
+                      v-model="userItem.delete "
+                      placeholder="delete"
+                      style="padding-left: 4px; padding-right: 4px"
+                    >
+                      <option v-bind:value="true">true</option>
+                      <option v-bind:value="false">false</option>
+                    </select>
+                  </div>
+                  <div
+                    class="col-sm-1 bg-white"
+                    v-if="authInfo.users.length >1"
+                  >
+                    <button type="button" @click="removeAuthUserItem($index)">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    class="btn btn-link"
+                    @click="addAuthUserItem"
+                  >
+                    <i class="glyphicon glyphicon-plus" aria-hidden="true"></i>
+                    add new user item
+                  </button>
+                </div>
+
+                <div class="row" style="margin-bottom: 8px; margin-top: 8px">
+                  <div class="col-sm-2 bg-white">accessTables:</div>
+                </div>
+                <div class="row">
+                  <div class="col-sm-9 bg-white">regex</div>
+                  <div class="col-sm-2 bg-white">allow</div>
+                </div>
+                <div
+                  class="row"
+                  style="margin-bottom: 8px"
+                  v-for="accessItem in authInfo.accessTables"
+                >
+                  <div class="col-sm-9 bg-white">
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="accessItem.regex"
+                      placeholder="regex"
+                    />
+                  </div>
+                  <div class="col-sm-2 bg-white">
+                    <select
+                      class="form-control"
+                      v-model="accessItem.allow"
+                      placeholder="allow"
+                    >
+                      <option v-bind:value="true">true</option>
+                      <option v-bind:value="false">false</option>
+                    </select>
+                  </div>
+
+                  <div
+                    class="col-sm-1 bg-white"
+                    v-if="authInfo.accessTables.length >1"
+                  >
+                    <button type="button" @click="removeAccessItem($index)">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    class="btn btn-link"
+                    @click="addAccessUserItem"
+                  >
+                    <i class="glyphicon glyphicon-plus" aria-hidden="true"></i>
+                    add new accessTable item
+                  </button>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-default"
+                  @click="editAuthInfo"
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="col-md-12">
         <div id="footer" class="pull-right" style="margin: 2em 1em">
@@ -474,6 +774,7 @@
     <script src="[[.Prefix]]/-/assets/js/underscore-min.js"></script>
     <script src="[[.Prefix]]/-/assets/js/clipboard-1.5.12.min.js"></script>
     <script src="[[.Prefix]]/-/assets/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+    <script src="[[.Prefix]]/-/assets/js/js-yaml.js"></script>
     <script src='[[.Prefix]]/-/assets/[["js/index.js" | urlhash ]]'></script>
     <!-- <script src="[[.Prefix]]/-/assets/js/index.js"></script> -->
     <!--Sync status bar color with border-color on mobile platforms.-->
