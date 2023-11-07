@@ -396,6 +396,7 @@ var vm = new Vue({
         method: "PUT",
         success: function () {
           $("#edit-user-modal").modal("hide");
+          $("#edit-auth-modal").modal("hide");
         },
         error: function (jqXHR, textStatus, errorThrown) {
           showErrorMessage(jqXHR);
