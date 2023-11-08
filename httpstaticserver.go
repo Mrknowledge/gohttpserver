@@ -104,6 +104,7 @@ func NewHTTPStaticServer(root string) *HTTPStaticServer {
 
 	//ken add 20231107
 	m.HandleFunc("/-/user", s.hUser).Methods("GET", "HEAD")
+	m.HandleFunc("/-/logout", s.hLogout).Methods("GET")
 
 	m.HandleFunc("/{path:.*}", s.hIndex).Methods("GET", "HEAD")
 	m.HandleFunc("/{path:.*}", s.hUploadOrMkdir).Methods("POST")
@@ -145,6 +146,14 @@ func (s *HTTPStaticServer) hUser(w http.ResponseWriter, r *http.Request) {
 	}
 	userInfo := val.(*UserInfo)
 	w.Write([]byte(userInfo.Id))
+	return
+}
+
+// ken add 20231107
+func (s *HTTPStaticServer) hLogout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("WWW-Authenticate", "basic realm=\"My Realm\"")
+	w.WriteHeader(http.StatusUnauthorized)
+	w.Write([]byte("401 - Unauthorized"))
 	return
 }
 
