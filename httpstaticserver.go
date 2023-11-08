@@ -102,6 +102,10 @@ func NewHTTPStaticServer(root string) *HTTPStaticServer {
 	m.HandleFunc("/-/ipa/plist/{path:.*}", s.hPlist)
 	m.HandleFunc("/-/ipa/link/{path:.*}", s.hIpaLink)
 
+	//ken add 20231107
+	m.HandleFunc("/-/user", s.hUser).Methods("GET", "HEAD")
+	m.HandleFunc("/-/logout", s.hLogout).Methods("GET")
+
 	m.HandleFunc("/{path:.*}", s.hIndex).Methods("GET", "HEAD")
 	m.HandleFunc("/{path:.*}", s.hUploadOrMkdir).Methods("POST")
 	m.HandleFunc("/{path:.*}", s.hDelete).Methods("DELETE")
@@ -126,6 +130,31 @@ func (s *HTTPStaticServer) getRealPath(r *http.Request) string {
 	}
 	realPath := filepath.Join(s.Root, relativePath)
 	return filepath.ToSlash(realPath)
+}
+
+// ken add 20231107
+func (s *HTTPStaticServer) hUser(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, defaultSessionName)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	val := session.Values["user"]
+	if val == nil {
+		http.Error(w, "user not logged in", 500)
+		return
+	}
+	userInfo := val.(*UserInfo)
+	w.Write([]byte(userInfo.Id))
+	return
+}
+
+// ken add 20231107
+func (s *HTTPStaticServer) hLogout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("WWW-Authenticate", "basic realm=\"My Realm\"")
+	w.WriteHeader(http.StatusUnauthorized)
+	w.Write([]byte("401 - Unauthorized"))
+	return
 }
 
 func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
@@ -174,7 +203,7 @@ func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 					NickName: username,
 				}
 				session.Values["user"] = user
-				if err := session.Save(r, w); err != nil {
+				if err = session.Save(r, w); err != nil {
 					log.Println("session save error:", err)
 				}
 			}
