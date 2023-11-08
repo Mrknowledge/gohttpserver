@@ -80,19 +80,13 @@
                 </a>
               </li>
 
-              <template v-if="!user.name">
-                <a href="/-/login" class="btn btn-sm btn-default navbar-btn">
-                  Sign in <span class="glyphicon glyphicon-user"></span>
-                </a>
-              </template>
-              <template v-else>
-                <button
-                  @click="logout"
-                  class="btn btn-sm btn-default navbar-btn"
-                >
-                  <span v-text="user.name"></span>
-                  <i class="fa fa-sign-out"></i>
-                </button>
+              <template v-if="!!user.name">
+                <li class="hidden-xs">
+                  <a @click="logout" class="btn btn-link">
+                    <span v-text="user.name"></span>
+                    <i class="fa fa-sign-out"></i>
+                  </a>
+                </li>
               </template>
               [[if eq .AuthType "oauth2-proxy"]]
               <template v-if="!user.email">

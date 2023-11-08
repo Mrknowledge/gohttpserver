@@ -123,7 +123,7 @@ var vm = new Vue({
   created: function () {
     console.log("created");
     $.ajax({
-      url: "/-/user",
+      url: pathJoin([location.pathname, "/-/user"]),
       method: "get",
       dataType: "json",
       success: function (ret) {
