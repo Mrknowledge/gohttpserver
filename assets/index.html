@@ -79,19 +79,22 @@
                   <span class="glyphicon glyphicon-qrcode"></span>
                 </a>
               </li>
-              [[if eq .AuthType "openid"]]
-              <template v-if="!user.email">
+
+              <template v-if="!user.name">
                 <a href="/-/login" class="btn btn-sm btn-default navbar-btn">
                   Sign in <span class="glyphicon glyphicon-user"></span>
                 </a>
               </template>
               <template v-else>
-                <a href="/-/logout" class="btn btn-sm btn-default navbar-btn">
+                <button
+                  @click="logout"
+                  class="btn btn-sm btn-default navbar-btn"
+                >
                   <span v-text="user.name"></span>
                   <i class="fa fa-sign-out"></i>
-                </a>
+                </button>
               </template>
-              [[end]] [[if eq .AuthType "oauth2-proxy"]]
+              [[if eq .AuthType "oauth2-proxy"]]
               <template v-if="!user.email">
                 <a href="#" class="btn btn-sm btn-default navbar-btn">
                   Guest <span class="glyphicon glyphicon-user"></span>
@@ -99,7 +102,7 @@
               </template>
               <template v-else>
                 <a href="/-/logout" class="btn btn-sm btn-default navbar-btn">
-                  <span v-text="user.name"></span>
+                  <span v-text="user.email"></span>
                   <i class="fa fa-sign-out"></i>
                 </a>
               </template>
@@ -198,9 +201,6 @@
                     @click="viewConfig('auth')"
                   >
                     Auth Config <i class="fa fa-gear"></i>
-                  </button>
-                  <button class="btn btn-xs btn-default" @click="logout">
-                    Logout
                   </button>
                 </div>
               </td>

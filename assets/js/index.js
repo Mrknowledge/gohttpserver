@@ -121,14 +121,22 @@ var vm = new Vue({
     },
   },
   created: function () {
+    console.log("created");
     $.ajax({
       url: "/-/user",
       method: "get",
       dataType: "json",
       success: function (ret) {
+        console.log(ret);
         if (ret) {
-          this.user.email = ret.email;
-          this.user.name = ret.name;
+          this.user.email = ret.email || ret;
+          this.user.name = ret?.name || ret;
+        }
+      }.bind(this),
+      error: function (err) {
+        if (err.responseText) {
+          this.user.name = err.responseText;
+          this.user.email = err.responseText;
         }
       }.bind(this),
     });
