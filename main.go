@@ -298,24 +298,6 @@ func main() {
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
 		w.Write(data)
 	})
-
-	//ken add 20231108
-	router.HandleFunc("/-/user", func(w http.ResponseWriter, r *http.Request) {
-		session, err := store.Get(r, defaultSessionName)
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		val := session.Values["user"]
-		if val == nil {
-			http.Error(w, "user not logged in", 500)
-			return
-		}
-		userInfo := val.(*UserInfo)
-		w.Write([]byte(userInfo.Id))
-		return
-	})
-
 	router.PathPrefix("/").Handler(hdlr)
 
 	if gcfg.Addr == "" {
