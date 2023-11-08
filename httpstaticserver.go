@@ -103,8 +103,8 @@ func NewHTTPStaticServer(root string) *HTTPStaticServer {
 	m.HandleFunc("/-/ipa/link/{path:.*}", s.hIpaLink)
 
 	//ken add 20231107
-	m.HandleFunc("/-/user", s.hUser).Methods("GET", "HEAD")
-	m.HandleFunc("/-/logout", s.hLogout).Methods("GET")
+	//m.HandleFunc(fmt.Sprintf("/%s/-/user", root), s.hUser).Methods("GET", "HEAD")
+	//m.HandleFunc("/-/logout", s.hLogout).Methods("GET")
 
 	m.HandleFunc("/{path:.*}", s.hIndex).Methods("GET", "HEAD")
 	m.HandleFunc("/{path:.*}", s.hUploadOrMkdir).Methods("POST")
@@ -133,21 +133,21 @@ func (s *HTTPStaticServer) getRealPath(r *http.Request) string {
 }
 
 // ken add 20231107
-func (s *HTTPStaticServer) hUser(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, defaultSessionName)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	val := session.Values["user"]
-	if val == nil {
-		http.Error(w, "user not logged in", 500)
-		return
-	}
-	userInfo := val.(*UserInfo)
-	w.Write([]byte(userInfo.Id))
-	return
-}
+//func (s *HTTPStaticServer) hUser(w http.ResponseWriter, r *http.Request) {
+//	session, err := store.Get(r, defaultSessionName)
+//	if err != nil {
+//		http.Error(w, err.Error(), 500)
+//		return
+//	}
+//	val := session.Values["user"]
+//	if val == nil {
+//		http.Error(w, "user not logged in", 500)
+//		return
+//	}
+//	userInfo := val.(*UserInfo)
+//	w.Write([]byte(userInfo.Id))
+//	return
+//}
 
 // ken add 20231107
 func (s *HTTPStaticServer) hLogout(w http.ResponseWriter, r *http.Request) {
