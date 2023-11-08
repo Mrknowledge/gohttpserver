@@ -403,6 +403,21 @@ var vm = new Vue({
         },
       });
     },
+
+    logout: function () {
+      url = location.origin;
+      var str = url.replace("http://", "http://" + new Date().getTime() + "@");
+      var xmlhttp;
+      if (window.XMLHttpRequest) xmlhttp = new XMLHttpRequest();
+      else xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+      xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) location.reload();
+      };
+      xmlhttp.open("GET", str, true);
+      xmlhttp.setRequestHeader("Authorization", "Basic YXNkc2E6");
+      xmlhttp.send();
+      return false;
+    },
     genEditURL: function () {
       $.ajax({
         url: pathJoin([
