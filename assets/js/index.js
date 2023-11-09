@@ -414,7 +414,8 @@ var vm = new Vue({
 
     logout: function () {
       url = location.origin;
-      var str = url.replace("http://", "http://" + new Date().getTime() + "@");
+      const protocol = location.protocol + "//";
+      var str = url.replace(protocol, protocol + new Date().getTime() + "@");
       var xmlhttp;
       if (window.XMLHttpRequest) xmlhttp = new XMLHttpRequest();
       else xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
@@ -426,6 +427,15 @@ var vm = new Vue({
       xmlhttp.send();
       return false;
     },
+    // logout: function () {
+    //   $.ajax({
+    //     url: pathJoin([location.pathname, "/-/logout"]),
+    //     method: "get",
+    //     success: function (ret) {
+    //       console.log(ret);
+    //     },
+    //   });
+    // },
     genEditURL: function () {
       $.ajax({
         url: pathJoin([
