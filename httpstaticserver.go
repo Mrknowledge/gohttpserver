@@ -814,12 +814,23 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 	// path string -> info os.FileInfo
 	fileInfoMap := make(map[string]os.FileInfo, 0)
 
+	// ken add for prefix 20231109
+	if len(gcfg.Prefix) > 0 {
+		log.Println(requestPath, len(requestPath), gcfg.Prefix, len(gcfg.Prefix))
+		requestPath = requestPath[len(gcfg.Prefix)-1:]
+		if strings.HasPrefix(requestPath, "/") {
+			requestPath = requestPath[1:]
+		}
+	}
+
+	log.Println("search:", search)
 	if search != "" {
 		results := s.findIndex(search)
-		if len(results) > 50 { // max 50
-			results = results[:50]
+		if len(results) > 100 { // max 100
+			results = results[:100]
 		}
 		for _, item := range results {
+			log.Println("debug", item.Path, requestPath)
 			if filepath.HasPrefix(item.Path, requestPath) {
 				fileInfoMap[item.Path] = item.Info
 			}
@@ -946,7 +957,7 @@ func (s *HTTPStaticServer) findIndex(text string) []IndexFileItem {
 			if keyword == "" {
 				continue
 			}
-			ok = (needContains == strings.Contains(strings.ToLower(item.Path), strings.ToLower(keyword)))
+			ok = needContains == strings.Contains(strings.ToLower(item.Path), strings.ToLower(keyword))
 			if !ok {
 				break
 			}
