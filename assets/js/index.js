@@ -413,7 +413,7 @@ var vm = new Vue({
     },
 
     logout: function () {
-      url = location.origin;
+      url = location.href;
       const protocol = location.protocol + "//";
       var str = url.replace(protocol, protocol + new Date().getTime() + "@");
       var xmlhttp;
