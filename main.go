@@ -126,12 +126,11 @@ func parseFlags() error {
 	kingpin.Flag("plistproxy", "plist proxy when server is not https").Short('p').StringVar(&gcfg.PlistProxy)
 	kingpin.Flag("title", "server title").StringVar(&gcfg.Title)
 	kingpin.Flag("google-tracker-id", "set to empty to disable it").StringVar(&gcfg.GoogleTrackerID)
-
 	kingpin.Parse() // first parse conf
 
 	if gcfg.Conf != nil {
 		defer func() {
-			kingpin.Parse() // command line priority high than conf
+			kingpin.Parse() // command line priority higher than conf
 		}()
 		ymlData, err := ioutil.ReadAll(gcfg.Conf)
 		if err != nil {
@@ -168,6 +167,7 @@ func mySimpleBasicAuthFunc(user, pass string, r *http.Request) bool {
 	givenPass := sha256.Sum256([]byte(pass))
 	//requiredUser := sha256.Sum256([]byte("aa"))
 	//requiredPass := sha256.Sum256([]byte("bb"))
+	log.Printf("User: %s attemp to login\n", givenUser)
 
 	//cfgFile := filepath.Join(realPath, ".user.yml")
 	cfgFile := ".user.yml"
