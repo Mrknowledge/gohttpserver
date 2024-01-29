@@ -167,7 +167,7 @@ func mySimpleBasicAuthFunc(user, pass string, r *http.Request) bool {
 	givenPass := sha256.Sum256([]byte(pass))
 	//requiredUser := sha256.Sum256([]byte("aa"))
 	//requiredPass := sha256.Sum256([]byte("bb"))
-	log.Printf("User: %s attemp to login\n", givenUser)
+	log.Printf("User: %s attemp to login\n", user)
 
 	//cfgFile := filepath.Join(realPath, ".user.yml")
 	cfgFile := ".user.yml"
