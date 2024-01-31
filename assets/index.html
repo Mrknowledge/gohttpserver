@@ -48,6 +48,18 @@
       type="text/css"
       href="[[.Prefix]]/-/assets/themes/[[.Theme]].css"
     />
+
+    <style>
+      .cookie {
+        position: fixed;
+        bottom: 25px;
+        left: 0;
+        right: 0px;
+        padding: 50px;
+        margin: 10px;
+        background: #f1f1f1;
+      }
+    </style>
   </head>
 
   <body id="app">
@@ -756,7 +768,36 @@
           <!--a href="https://github.com/codeskyblue/gohttpserver">gohttpserver ({{version}})</a>, by <a href="https://github.com/codeskyblue">codeskyblue</a-->.
         </div>
       </div>
+
+      <div class="cookie">
+        <div class="cookie__inner">
+          <div class="cookie__message">
+            <p>Cookies 声明</p>
+            <p>
+              我们使用cookie（以及类似技术）来改善您在我们网站上的体验。Cookie使您能够享受某些功能（如保存您的在线“购物篮”），并根据您的兴趣定制推荐的内容（在我们的网站和其他网站上）。
+            </p>
+          </div>
+          <div class="cookie__dismiss">
+            <button class="btn btn-primary btn-sm">同意我们使用cookie。</button>
+          </div>
+        </div>
+      </div>
     </div>
+    <script>
+      const cookieSeen = localStorage.getItem("cookieSeen");
+      const cookieDom = document.querySelector(".cookie");
+      const cookieBtn = document.querySelector(".cookie__dismiss button");
+
+      if (cookieSeen !== "shown") {
+        cookieDom.style.display = "block";
+      } else {
+        cookieDom.style.display = "none";
+      }
+      cookieBtn.addEventListener("click", () => {
+        localStorage.setItem("cookieSeen", "shown");
+        cookieDom.style.display = "none";
+      });
+    </script>
     <script>
       window.URL_PFEFIX = "[[.Prefix]]";
     </script>
