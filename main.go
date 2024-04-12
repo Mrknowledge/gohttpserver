@@ -269,10 +269,7 @@ func main() {
 	case "openid":
 		handleOpenID(gcfg.Auth.OpenID, false) // FIXME(ssx): set secure default to false
 	case "github":
-		//handleOAuth2ID(gcfg.Auth.Type, gcfg.Auth.ID, gcfg.Auth.Secret) // FIXME(ssx): set secure default to false
 		oauthConfig = &oauth2.Config{
-			//ClientID:     "Iv1.8c438dbb6bc99cd1",
-			//ClientSecret: "127b140731b7cfcc398adeac8db8c290d245b48c",
 			ClientID:     gcfg.Auth.ID,
 			ClientSecret: gcfg.Auth.Secret,
 			Endpoint: oauth2.Endpoint{

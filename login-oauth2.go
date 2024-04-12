@@ -11,28 +11,6 @@ import (
 )
 
 //var (
-//	githubOAuthConfig = &oauth2.Config {
-//		ClientID:     "Iv1.8c438dbb6bc99cd1",
-//		ClientSecret: "127b140731b7cfcc398adeac8db8c290d245b48c",
-//		Endpoint: oauth2.Endpoint{
-//			AuthURL:  "https://github.com/login/oauth/authorize",
-//			TokenURL: "https://github.com/login/oauth/access_token",
-//		},
-//		RedirectURL: "http://localhost:8080/github/callback",
-//		Scopes:      []string{"user:email"},
-//	}
-//
-//	microsoftOAuthConfig = &oauth2.Config{
-//		ClientID:     "YOUR_MICROSOFT_CLIENT_ID",
-//		ClientSecret: "YOUR_MICROSOFT_CLIENT_SECRET",
-//		Endpoint: oauth2.Endpoint{
-//			AuthURL:  "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
-//			TokenURL: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-//		},
-//		RedirectURL: "http://localhost:8080/microsoft/callback",
-//		Scopes:      []string{"openid", "profile", "email"},
-//	}
-//
 ////	nonceStore         = openid.NewSimpleNonceStore()
 ////	discoveryCache     = openid.NewSimpleDiscoveryCache()
 ////	store              = sessions.NewCookieStore([]byte("something-very-secret"))
