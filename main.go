@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/json"
 	"fmt"
 	"github.com/goji/httpauth"
+	"golang.org/x/oauth2"
 	"io/ioutil"
 	"log"
 	"net"
@@ -47,11 +47,12 @@ type Configure struct {
 	Debug           bool     `yaml:"debug"`
 	GoogleTrackerID string   `yaml:"google-tracker-id"`
 	Auth            struct {
-		Type   string `yaml:"type"` // openid|http|github
-		OpenID string `yaml:"openid"`
-		HTTP   string `yaml:"http"`
-		ID     string `yaml:"id"`     // for oauth2
-		Secret string `yaml:"secret"` // for oauth2
+		Type     string `yaml:"type"` // openid|http|github
+		OpenID   string `yaml:"openid"`
+		HTTP     string `yaml:"http"`
+		ID       string `yaml:"id"`       // for oauth2
+		Secret   string `yaml:"secret"`   // for oauth2
+		Redirect string `yaml:"redirect"` // for oauth2
 	} `yaml:"auth"`
 }
 
@@ -116,11 +117,14 @@ func parseFlags() error {
 	kingpin.Flag("auth-type", "Auth type <http|openid>").StringVar(&gcfg.Auth.Type)
 	kingpin.Flag("auth-http", "HTTP basic auth (ex: user:pass)").StringVar(&gcfg.Auth.HTTP)
 	kingpin.Flag("auth-openid", "OpenID auth identity url").StringVar(&gcfg.Auth.OpenID)
+	kingpin.Flag("auth-id", "oauth2 client id").StringVar(&gcfg.Auth.ID)
+	kingpin.Flag("auth-secret", "oauth2 client secret").StringVar(&gcfg.Auth.Secret)
+	kingpin.Flag("auth-redirect", "oauth2 redirect home page").StringVar(&gcfg.Auth.Redirect)
 	kingpin.Flag("theme", "web theme, one of <black|green>").StringVar(&gcfg.Theme)
 	kingpin.Flag("show", "enable show support").BoolVar(&gcfg.Show)
 	kingpin.Flag("upload", "enable upload support").BoolVar(&gcfg.Upload)
 	kingpin.Flag("delete", "enable delete support").BoolVar(&gcfg.Delete)
-	kingpin.Flag("xheaders", "used when behide nginx").BoolVar(&gcfg.XHeaders)
+	kingpin.Flag("xheaders", "used when behind nginx").BoolVar(&gcfg.XHeaders)
 	kingpin.Flag("cors", "enable cross-site HTTP request").BoolVar(&gcfg.Cors)
 	kingpin.Flag("debug", "enable debug mode").BoolVar(&gcfg.Debug)
 	kingpin.Flag("plistproxy", "plist proxy when server is not https").Short('p').StringVar(&gcfg.PlistProxy)
@@ -161,12 +165,9 @@ type User map[string]string
 //	return pass == strings.Repeat(user, 3)
 //}
 func mySimpleBasicAuthFunc(user, pass string, r *http.Request) bool {
-	// Equalize lengths of supplied and required credentials
-	// by hashing them
+	// Equalize lengths of supplied and required credentials by hashing them
 	givenUser := sha256.Sum256([]byte(user))
 	givenPass := sha256.Sum256([]byte(pass))
-	//requiredUser := sha256.Sum256([]byte("aa"))
-	//requiredPass := sha256.Sum256([]byte("bb"))
 	log.Printf("User: %s attemp to login\n", user)
 
 	//cfgFile := filepath.Join(realPath, ".user.yml")
@@ -249,6 +250,8 @@ func main() {
 
 	hdlr = accesslog.NewLoggingHandler(hdlr, logger)
 
+	var oauthConfig *oauth2.Config
+
 	// HTTP Basic Authentication
 	//userpass := strings.SplitN(gcfg.Auth.HTTP, ":", 2)
 	switch gcfg.Auth.Type {
@@ -265,8 +268,33 @@ func main() {
 		hdlr = httpauth.BasicAuth(opts)(hdlr)
 	case "openid":
 		handleOpenID(gcfg.Auth.OpenID, false) // FIXME(ssx): set secure default to false
-		// case "github":
-		// 	handleOAuth2ID(gcfg.Auth.Type, gcfg.Auth.ID, gcfg.Auth.Secret) // FIXME(ssx): set secure default to false
+	case "github":
+		//handleOAuth2ID(gcfg.Auth.Type, gcfg.Auth.ID, gcfg.Auth.Secret) // FIXME(ssx): set secure default to false
+		oauthConfig = &oauth2.Config{
+			//ClientID:     "Iv1.8c438dbb6bc99cd1",
+			//ClientSecret: "127b140731b7cfcc398adeac8db8c290d245b48c",
+			ClientID:     gcfg.Auth.ID,
+			ClientSecret: gcfg.Auth.Secret,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://github.com/login/oauth/authorize",
+				TokenURL: "https://github.com/login/oauth/access_token",
+			},
+			//RedirectURL: fmt.Sprintf("http://localhost:8000%s/-/callback", gcfg.Prefix),
+			RedirectURL: fmt.Sprintf("%s%s/-/callback", gcfg.Auth.Redirect, gcfg.Prefix),
+			Scopes:      []string{"user:email"},
+		}
+	case "microsoft":
+		oauthConfig = &oauth2.Config{
+			ClientID:     gcfg.Auth.ID,
+			ClientSecret: gcfg.Auth.Secret,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+				TokenURL: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+			},
+			//RedirectURL: fmt.Sprintf("http://localhost:8000%s/-/callback", gcfg.Prefix),
+			RedirectURL: fmt.Sprintf("%s%s/-/callback", gcfg.Auth.Redirect, gcfg.Prefix),
+			Scopes:      []string{"openid", "profile", "email"},
+		}
 	case "oauth2-proxy":
 		handleOauth2()
 	}
@@ -290,14 +318,9 @@ func main() {
 	}
 
 	router.PathPrefix("/-/assets/").Handler(http.StripPrefix(gcfg.Prefix+"/-/", http.FileServer(Assets)))
-	router.HandleFunc("/-/sysinfo", func(w http.ResponseWriter, r *http.Request) {
-		data, _ := json.Marshal(map[string]interface{}{
-			"version": VERSION,
-		})
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
-		w.Write(data)
-	})
+	router.HandleFunc("/-/login", handleOAuthLogin(gcfg.Auth.Type, oauthConfig, ss))
+	router.HandleFunc("/-/callback", handleOAuthCallback(gcfg.Auth.Type, oauthConfig))
+	router.HandleFunc("/-/sysinfo", handleSysInfo())
 	router.PathPrefix("/").Handler(hdlr)
 
 	if gcfg.Addr == "" {

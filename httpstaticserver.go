@@ -153,10 +153,24 @@ func (s *HTTPStaticServer) hUser(w http.ResponseWriter, r *http.Request) {
 
 // ken add 20231107
 func (s *HTTPStaticServer) hLogout(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("WWW-Authenticate", "basic realm=\"My Realm\"")
-	w.WriteHeader(http.StatusUnauthorized)
-	w.Write([]byte("401 - Unauthorized"))
-	return
+	//w.Header().Set("WWW-Authenticate", "basic realm=\"My Realm\"")
+	//w.WriteHeader(http.StatusUnauthorized)
+	//w.Write([]byte("401 - Unauthorized"))
+	//return
+
+	session, err := store.Get(r, defaultSessionName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	delete(session.Values, "user")
+	session.Options.MaxAge = -1
+	nextUrl := r.FormValue("next")
+	_ = session.Save(r, w)
+	if nextUrl == "" {
+		nextUrl = r.Referer()
+	}
+	http.Redirect(w, r, nextUrl, 302)
 }
 
 func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
@@ -380,8 +394,8 @@ func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, req *http.Reque
 
 	file, header, err := req.FormFile("file")
 
-	if _, err := os.Stat(dirpath); os.IsNotExist(err) {
-		if err := os.MkdirAll(dirpath, os.ModePerm); err != nil {
+	if _, err = os.Stat(dirpath); os.IsNotExist(err) {
+		if err = os.MkdirAll(dirpath, os.ModePerm); err != nil {
 			log.Println("Create directory:", err)
 			http.Error(w, "Directory create "+err.Error(), http.StatusInternalServerError)
 			return
@@ -411,7 +425,7 @@ func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, req *http.Reque
 	if filename == "" {
 		filename = header.Filename
 	}
-	if err := checkFilename(filename); err != nil {
+	if err = checkFilename(filename); err != nil {
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}

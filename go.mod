@@ -16,12 +16,11 @@ require (
 	github.com/gorilla/handlers v1.4.0
 	github.com/gorilla/mux v1.6.2
 	github.com/gorilla/sessions v1.1.3
-	github.com/pkg/errors v0.8.0 // indirect
 	github.com/shogo82148/androidbinary v0.0.0-20180627093851-01c4bfa8b3b5
 	github.com/smartystreets/goconvey v1.6.4 // indirect
-	github.com/stretchr/testify v1.3.0
-	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
-	golang.org/x/text v0.3.3
+	github.com/stretchr/testify v1.8.1
+	golang.org/x/oauth2 v0.19.0
+	golang.org/x/text v0.9.0
 	gopkg.in/yaml.v3 v3.0.1
 	howett.net/plist v0.0.0-20201203080718-1454fab16a06 // indirect
 )
