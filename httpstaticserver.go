@@ -174,6 +174,12 @@ func (s *HTTPStaticServer) hLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	path := mux.Vars(r)["path"]
 	realPath := s.getRealPath(r)
 	if r.FormValue("json") == "true" {
@@ -203,27 +209,27 @@ func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		//ken add
-		if gcfg.Auth.Type == "http" {
-			username, _, ok := r.BasicAuth()
-			if ok {
-				session, err := store.Get(r, defaultSessionName)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				user := &UserInfo{
-					Id:       username,
-					Email:    username,
-					Name:     username,
-					NickName: username,
-				}
-				session.Values["user"] = user
-				if err = session.Save(r, w); err != nil {
-					log.Println("session save error:", err)
-				}
-			}
-		}
+		////ken add
+		//if gcfg.Auth.Type == "http" {
+		//	username, _, ok := r.BasicAuth()
+		//	if ok {
+		//		session, err := store.Get(r, defaultSessionName)
+		//		if err != nil {
+		//			http.Error(w, err.Error(), http.StatusInternalServerError)
+		//			return
+		//		}
+		//		user := &UserInfo{
+		//			Id:       username,
+		//			Email:    username,
+		//			Name:     username,
+		//			NickName: username,
+		//		}
+		//		session.Values["user"] = user
+		//		if err = session.Save(r, w); err != nil {
+		//			log.Println("session save error:", err)
+		//		}
+		//	}
+		//}
 
 		renderHTML(w, "assets/index.html", s)
 	} else {
@@ -244,18 +250,24 @@ func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *HTTPStaticServer) hDelete(w http.ResponseWriter, req *http.Request) {
-	path := mux.Vars(req)["path"]
-	realPath := s.getRealPath(req)
+func (s *HTTPStaticServer) hDelete(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	path := mux.Vars(r)["path"]
+	realPath := s.getRealPath(r)
 	// path = filepath.Clean(path) // for safe reason, prevent path contain ..
 	auth := s.readAccessConf(realPath)
-	if !auth.canDelete(req) {
+	if !auth.canDelete(r) {
 		http.Error(w, "Delete forbidden", http.StatusForbidden)
 		return
 	}
 
 	// TODO: path safe check
-	err := os.RemoveAll(realPath)
+	err = os.RemoveAll(realPath)
 	if err != nil {
 		pathErr, ok := err.(*os.PathError)
 		if ok {
@@ -267,48 +279,57 @@ func (s *HTTPStaticServer) hDelete(w http.ResponseWriter, req *http.Request) {
 	}
 
 	//ken add method1
-	user, _, hasAuth := req.BasicAuth()
-	if hasAuth && len(user) > 0 {
-		log.Println(user, "- Removed file:", path)
+	if gcfg.Auth.Type == "http" {
+		user, _, hasAuth := r.BasicAuth()
+		if hasAuth && len(user) > 0 {
+			log.Println(user, "- Removed file:", path)
+		} else {
+			log.Println("Removed file:", path)
+		}
 	} else {
-		log.Println("Removed file:", path)
+		//ken add method2
+		session, err := store.Get(r, defaultSessionName)
+		if err != nil {
+			log.Println("Get session info err:", err)
+			log.Println("Removed file:", path)
+		} else {
+			val := session.Values["user"]
+			if val == nil {
+				log.Println("Get user info null")
+				log.Println("Removed file:", path)
+			} else {
+				userInfo := val.(*UserInfo)
+				log.Println(userInfo.Name, "- Removed file:", path)
+			}
+		}
 	}
-	//ken add method2
-	//session, err := store.Get(req, defaultSessionName)
-	//if err != nil {
-	//	log.Println("Get session info err:", err)
-	//	log.Println("Removed file:", path)
-	//} else {
-	//	val := session.Values["user"]
-	//	if val == nil {
-	//		log.Println("Get user info null")
-	//		log.Println("Removed file:", path)
-	//	} else {
-	//		userInfo := val.(*UserInfo)
-	//		log.Println(userInfo.Name, "- Removed file:", path)
-	//	}
-	//}
 
 	w.Write([]byte("Success"))
 }
 
 //ken add 20220814
-func (s *HTTPStaticServer) hRename(w http.ResponseWriter, req *http.Request) {
+func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	//path := mux.Vars(req)["path"]
-	realPath := s.getRealPath(req)
+	realPath := s.getRealPath(r)
 	// path = filepath.Clean(path) // for safe reason, prevent path contain ..
 	auth := s.readAccessConf(realPath)
-	if !auth.canDelete(req) {
+	if !auth.canDelete(r) {
 		http.Error(w, "Rename forbidden", http.StatusForbidden)
 		return
 	}
 
 	// TODO: path safe check
-	filename := req.FormValue("filename")
+	filename := r.FormValue("filename")
 	if filename == "" {
 		//ken add 20231101
-		op := req.FormValue("op")
-		content := req.FormValue("content")
+		op := r.FormValue("op")
+		content := r.FormValue("content")
 		if op == "conf" && content != "" {
 			log.Println(content)
 			decodedContent, err := base64.StdEncoding.DecodeString(content)
@@ -317,7 +338,7 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 			log.Println(string(decodedContent))
-			if req.FormValue("type") == "user" {
+			if r.FormValue("type") == "user" {
 				if !s.saveUserConf(decodedContent) {
 					http.Error(w, "save content failed", http.StatusInternalServerError)
 					return
@@ -357,42 +378,51 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, req *http.Request) {
 	}
 
 	//ken add method1
-	user, _, hasAuth := req.BasicAuth()
-	if hasAuth && len(user) > 0 {
-		log.Println(user, "- Renamed file", realPath, "to", dstPath)
+	if gcfg.Auth.Type == "http" {
+		user, _, hasAuth := r.BasicAuth()
+		if hasAuth && len(user) > 0 {
+			log.Println(user, "- Renamed file", realPath, "to", dstPath)
+		} else {
+			log.Println("Renamed file", realPath, "to", dstPath)
+		}
 	} else {
-		log.Println("Renamed file", realPath, "to", dstPath)
+		//ken add method2
+		session, err := store.Get(r, defaultSessionName)
+		if err != nil {
+			log.Println("Get session info err:", err)
+			log.Println("Renamed file", realPath, "to", dstPath)
+		} else {
+			val := session.Values["user"]
+			if val == nil {
+				log.Println("Get user info null")
+				log.Println("Renamed file", realPath, "to", dstPath)
+			} else {
+				userInfo := val.(*UserInfo)
+				log.Println(userInfo.Email, "- Renamed file", realPath, "to", dstPath)
+			}
+		}
 	}
-	//ken add method2
-	//session, err := store.Get(req, defaultSessionName)
-	//if err != nil {
-	//	log.Println("Get session info err:", err)
-	//	log.Println("Removed directory:", path)
-	//} else {
-	//	val := session.Values["user"]
-	//	if val == nil {
-	//		log.Println("Get user info null")
-	//		log.Println("Removed directory:", path)
-	//	} else {
-	//		userInfo := val.(*UserInfo)
-	//		log.Println(userInfo.Name, "- Removed directory:", path)
-	//	}
-	//}
 
 	w.Write([]byte("Success"))
 }
 
-func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, req *http.Request) {
-	dirpath := s.getRealPath(req)
+func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
+	dirpath := s.getRealPath(r)
 
 	// check auth
 	auth := s.readAccessConf(dirpath)
-	if !auth.canUpload(req) {
+	if !auth.canUpload(r) {
 		http.Error(w, "Upload forbidden", http.StatusForbidden)
 		return
 	}
 
-	file, header, err := req.FormFile("file")
+	file, header, err := r.FormFile("file")
 
 	if _, err = os.Stat(dirpath); os.IsNotExist(err) {
 		if err = os.MkdirAll(dirpath, os.ModePerm); err != nil {
@@ -418,10 +448,10 @@ func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, req *http.Reque
 	}
 	defer func() {
 		file.Close()
-		req.MultipartForm.RemoveAll() // Seen from go source code, req.MultipartForm not nil after call FormFile(..)
+		r.MultipartForm.RemoveAll() // Seen from go source code, req.MultipartForm not nil after call FormFile(..)
 	}()
 
-	filename := req.FormValue("filename")
+	filename := r.FormValue("filename")
 	if filename == "" {
 		filename = header.Filename
 	}
@@ -465,7 +495,7 @@ func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, req *http.Reque
 
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 
-	if req.FormValue("unzip") == "true" {
+	if r.FormValue("unzip") == "true" {
 		err = unzipFile(dstPath, dirpath)
 		os.Remove(dstPath)
 		message := "success"
@@ -485,11 +515,29 @@ func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, req *http.Reque
 	})
 
 	//ken add method1
-	user, _, hasAuth := req.BasicAuth()
-	if hasAuth && len(user) > 0 {
-		log.Println(user, "- Create file:", filename)
+	if gcfg.Auth.Type == "http" {
+		user, _, hasAuth := r.BasicAuth()
+		if hasAuth && len(user) > 0 {
+			log.Println(user, "- Create file:", filename)
+		} else {
+			log.Println("Create file:", filename)
+		}
 	} else {
-		log.Println("Create file:", filename)
+		//ken add method2
+		session, err := store.Get(r, defaultSessionName)
+		if err != nil {
+			log.Println("Get session info err:", err)
+			log.Println("Create file", filename)
+		} else {
+			val := session.Values["user"]
+			if val == nil {
+				log.Println("Get user info null")
+				log.Println("Create file", filename)
+			} else {
+				userInfo := val.(*UserInfo)
+				log.Println(userInfo.Email, "- Create file", filename)
+			}
+		}
 	}
 }
 
@@ -522,6 +570,12 @@ func parseApkInfo(path string) (ai *ApkInfo) {
 }
 
 func (s *HTTPStaticServer) hInfo(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	path := mux.Vars(r)["path"]
 	relPath := s.getRealPath(r)
 
@@ -555,6 +609,12 @@ func (s *HTTPStaticServer) hInfo(w http.ResponseWriter, r *http.Request) {
 
 //ken add 20231102
 func (s *HTTPStaticServer) hConf(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	//path := mux.Vars(req)["path"]
 	realPath := s.getRealPath(r)
 	// path = filepath.Clean(path) // for safe reason, prevent path contain ..
@@ -586,13 +646,19 @@ func (s *HTTPStaticServer) hZip(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HTTPStaticServer) hUnzip(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	vars := mux.Vars(r)
 	zipPath, path := vars["zip_path"], vars["path"]
 	ctype := mime.TypeByExtension(filepath.Ext(path))
 	if ctype != "" {
 		w.Header().Set("Content-Type", ctype)
 	}
-	err := ExtractFromZip(filepath.Join(s.Root, zipPath), path, w)
+	err = ExtractFromZip(filepath.Join(s.Root, zipPath), path, w)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -608,6 +674,12 @@ func combineURL(r *http.Request, path string) *url.URL {
 }
 
 func (s *HTTPStaticServer) hPlist(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	path := mux.Vars(r)["path"]
 	// rename *.plist to *.ipa
 	if filepath.Ext(path) == ".plist" {
@@ -639,6 +711,12 @@ func (s *HTTPStaticServer) hPlist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HTTPStaticServer) hIpaLink(w http.ResponseWriter, r *http.Request) {
+	ok, err := Validate(w, r)
+	if !ok {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	path := mux.Vars(r)["path"]
 	var plistUrl string
 
@@ -1192,4 +1270,47 @@ func PathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err //如果有错误了，但是不是不存在的错误，所以把这个错误原封不动的返回
+}
+
+// Validate ken add
+func Validate(w http.ResponseWriter, r *http.Request) (bool, error) {
+	switch gcfg.Auth.Type {
+	case "http":
+		username, _, ok := r.BasicAuth()
+		if ok {
+			session, err := store.Get(r, defaultSessionName)
+			if err != nil {
+				//http.Error(w, err.Error(), http.StatusInternalServerError)
+				return false, err
+			}
+			user := &UserInfo{
+				Id:       username,
+				Email:    username,
+				Name:     username,
+				NickName: username,
+			}
+			session.Values["user"] = user
+			if err = session.Save(r, w); err != nil {
+				log.Println("session save error:", err)
+			}
+			return true, nil
+		}
+		return false, errors.New("no authorization provided")
+	case "microsoft", "github":
+		session, err := store.Get(r, defaultSessionName)
+		if err != nil {
+			//http.Error(w, err.Error(), http.StatusInternalServerError)
+			return false, err
+		}
+
+		if value, ok := session.Values["user"].(*UserInfo); ok {
+			log.Printf("user %s logged in\n", value.Email)
+			return true, nil
+		} else {
+			return false, errors.New("not logged in")
+		}
+		return false, nil
+	}
+
+	return true, nil
 }
