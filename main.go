@@ -317,7 +317,7 @@ func main() {
 	router.PathPrefix("/-/assets/").Handler(http.StripPrefix(gcfg.Prefix+"/-/", http.FileServer(Assets)))
 	router.HandleFunc("/-/login", handleOAuthLogin(gcfg.Auth.Type, oauthConfig, ss))
 	router.HandleFunc("/-/callback", handleOAuthCallback(gcfg.Auth.Type, oauthConfig))
-	router.HandleFunc("/-/sysinfo", handleSysInfo())
+	router.HandleFunc("/-/sysinfo", handleSysInfo(gcfg.Auth.Type))
 	router.PathPrefix("/").Handler(hdlr)
 
 	if gcfg.Addr == "" {

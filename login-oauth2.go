@@ -233,11 +233,12 @@ func handleOAuthCallback(provider string, oauthConfig *oauth2.Config) http.Handl
 	}
 }
 
-func handleSysInfo() http.HandlerFunc {
+func handleSysInfo(provider string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, _ := json.Marshal(map[string]interface{}{
-			"version": VERSION,
+			"version":   VERSION,
+			"auth_type": provider,
 		})
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
