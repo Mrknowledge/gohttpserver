@@ -278,31 +278,32 @@ func (s *HTTPStaticServer) hDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//ken add method1
-	if gcfg.Auth.Type == "http" {
-		user, _, hasAuth := r.BasicAuth()
-		if hasAuth && len(user) > 0 {
-			log.Println(user, "- Removed file:", path)
-		} else {
-			log.Println("Removed file:", path)
-		}
-	} else {
-		//ken add method2
-		session, err := store.Get(r, defaultSessionName)
-		if err != nil {
-			log.Println("Get session info err:", err)
-			log.Println("Removed file:", path)
-		} else {
-			val := session.Values["user"]
-			if val == nil {
-				log.Println("Get user info null")
-				log.Println("Removed file:", path)
-			} else {
-				userInfo := val.(*UserInfo)
-				log.Println(userInfo.Name, "- Removed file:", path)
-			}
-		}
-	}
+	AuditLog(r, fmt.Sprintf("Removed file %s", path))
+	////ken add method1
+	//if gcfg.Auth.Type == "http" {
+	//	user, _, hasAuth := r.BasicAuth()
+	//	if hasAuth && len(user) > 0 {
+	//		log.Println(user, "- Removed file:", path)
+	//	} else {
+	//		log.Println("Removed file:", path)
+	//	}
+	//} else {
+	//	//ken add method2
+	//	session, err := store.Get(r, defaultSessionName)
+	//	if err != nil {
+	//		log.Println("Get session info err:", err)
+	//		log.Println("Removed file:", path)
+	//	} else {
+	//		val := session.Values["user"]
+	//		if val == nil {
+	//			log.Println("Get user info null")
+	//			log.Println("Removed file:", path)
+	//		} else {
+	//			userInfo := val.(*UserInfo)
+	//			log.Println(userInfo.Name, "- Removed file:", path)
+	//		}
+	//	}
+	//}
 
 	w.Write([]byte("Success"))
 }
@@ -355,7 +356,7 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if err := checkFilename(filename); err != nil {
+	if err = checkFilename(filename); err != nil {
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
@@ -377,31 +378,32 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//ken add method1
-	if gcfg.Auth.Type == "http" {
-		user, _, hasAuth := r.BasicAuth()
-		if hasAuth && len(user) > 0 {
-			log.Println(user, "- Renamed file", realPath, "to", dstPath)
-		} else {
-			log.Println("Renamed file", realPath, "to", dstPath)
-		}
-	} else {
-		//ken add method2
-		session, err := store.Get(r, defaultSessionName)
-		if err != nil {
-			log.Println("Get session info err:", err)
-			log.Println("Renamed file", realPath, "to", dstPath)
-		} else {
-			val := session.Values["user"]
-			if val == nil {
-				log.Println("Get user info null")
-				log.Println("Renamed file", realPath, "to", dstPath)
-			} else {
-				userInfo := val.(*UserInfo)
-				log.Println(userInfo.Email, "- Renamed file", realPath, "to", dstPath)
-			}
-		}
-	}
+	AuditLog(r, fmt.Sprintf("Renamed file %s to %s", realPath, dstPath))
+	////ken add method1
+	//if gcfg.Auth.Type == "http" {
+	//	user, _, hasAuth := r.BasicAuth()
+	//	if hasAuth && len(user) > 0 {
+	//		log.Println(user, "- Renamed file", realPath, "to", dstPath)
+	//	} else {
+	//		log.Println("Renamed file", realPath, "to", dstPath)
+	//	}
+	//} else {
+	//	//ken add method2
+	//	session, err := store.Get(r, defaultSessionName)
+	//	if err != nil {
+	//		log.Println("Get session info err:", err)
+	//		log.Println("Renamed file", realPath, "to", dstPath)
+	//	} else {
+	//		val := session.Values["user"]
+	//		if val == nil {
+	//			log.Println("Get user info null")
+	//			log.Println("Renamed file", realPath, "to", dstPath)
+	//		} else {
+	//			userInfo := val.(*UserInfo)
+	//			log.Println(userInfo.Email, "- Renamed file", realPath, "to", dstPath)
+	//		}
+	//	}
+	//}
 
 	w.Write([]byte("Success"))
 }
@@ -514,31 +516,32 @@ func (s *HTTPStaticServer) hUploadOrMkdir(w http.ResponseWriter, r *http.Request
 		"destination": dstPath,
 	})
 
-	//ken add method1
-	if gcfg.Auth.Type == "http" {
-		user, _, hasAuth := r.BasicAuth()
-		if hasAuth && len(user) > 0 {
-			log.Println(user, "- Create file:", filename)
-		} else {
-			log.Println("Create file:", filename)
-		}
-	} else {
-		//ken add method2
-		session, err := store.Get(r, defaultSessionName)
-		if err != nil {
-			log.Println("Get session info err:", err)
-			log.Println("Create file", filename)
-		} else {
-			val := session.Values["user"]
-			if val == nil {
-				log.Println("Get user info null")
-				log.Println("Create file", filename)
-			} else {
-				userInfo := val.(*UserInfo)
-				log.Println(userInfo.Email, "- Create file", filename)
-			}
-		}
-	}
+	AuditLog(r, fmt.Sprintf("Create file %s", filename))
+	////ken add method1
+	//if gcfg.Auth.Type == "http" {
+	//	user, _, hasAuth := r.BasicAuth()
+	//	if hasAuth && len(user) > 0 {
+	//		log.Println(user, "- Create file:", filename)
+	//	} else {
+	//		log.Println("Create file:", filename)
+	//	}
+	//} else {
+	//	//ken add method2
+	//	session, err := store.Get(r, defaultSessionName)
+	//	if err != nil {
+	//		log.Println("Get session info err:", err)
+	//		log.Println("Create file", filename)
+	//	} else {
+	//		val := session.Values["user"]
+	//		if val == nil {
+	//			log.Println("Get user info null")
+	//			log.Println("Create file", filename)
+	//		} else {
+	//			userInfo := val.(*UserInfo)
+	//			log.Println(userInfo.Email, "- Create file", filename)
+	//		}
+	//	}
+	//}
 }
 
 type FileJSONInfo struct {
@@ -1313,4 +1316,33 @@ func Validate(w http.ResponseWriter, r *http.Request) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func AuditLog(r *http.Request, msg string) {
+	switch gcfg.Auth.Type {
+	case "http":
+		//ken add method1
+		user, _, hasAuth := r.BasicAuth()
+		if hasAuth && len(user) > 0 {
+			log.Println(user, "-", msg)
+		} else {
+			log.Println(msg)
+		}
+	case "microsoft", "github":
+		//ken add method2
+		session, err := store.Get(r, defaultSessionName)
+		if err != nil {
+			log.Println("Get session info err:", err)
+			log.Println(msg)
+		} else {
+			val := session.Values["user"]
+			if val == nil {
+				log.Println("Get user info null")
+				log.Println(msg)
+			} else {
+				userInfo := val.(*UserInfo)
+				log.Println(userInfo.Email, "-", msg)
+			}
+		}
+	}
 }
