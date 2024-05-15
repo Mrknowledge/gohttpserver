@@ -146,8 +146,9 @@ func handleOpenId(provider string, oauthConfig *oauth2.Config) {
 //func handleOAuthLogin(provider string, oauthConfig *oauth2.Config, hsServer *HTTPStaticServer) http.HandlerFunc {
 func handleOAuthLogin(oauthConfig *oauth2.Config, hsServer *HTTPStaticServer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		authType := r.FormValue("authType")
-		switch authType {
+		provider := r.FormValue("provider")
+		log.Println("xxxx", provider)
+		switch provider {
 		case "http":
 			//本地认证
 			//username := r.URL.Query().Get("username")
