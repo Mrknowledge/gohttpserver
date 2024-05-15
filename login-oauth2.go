@@ -143,55 +143,65 @@ func handleOpenId(provider string, oauthConfig *oauth2.Config) {
 	//})
 }
 
-func handleOAuthLogin(provider string, oauthConfig *oauth2.Config, hsServer *HTTPStaticServer) http.HandlerFunc {
-
+//func handleOAuthLogin(provider string, oauthConfig *oauth2.Config, hsServer *HTTPStaticServer) http.HandlerFunc {
+func handleOAuthLogin(oauthConfig *oauth2.Config, hsServer *HTTPStaticServer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//本地认证
-		//username := r.URL.Query().Get("username")
-		//password := r.URL.Query().Get("password")
-		username := r.FormValue("username")
-		password := r.FormValue("password")
-		if username != "" && password != "" {
-			users := hsServer.readUserConf()
-			for _, user := range users.User {
-				value := user[username]
-				if password == value {
-					session, err := store.Get(r, defaultSessionName)
-					if err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-					userInfo := &UserInfo{
-						Id:       username,
-						Email:    username,
-						Name:     username,
-						NickName: username,
-					}
-					session.Values["user"] = userInfo
-					if err = session.Save(r, w); err != nil {
-						log.Println("session save error:", err)
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						return
-					}
-					log.Println(username, "login")
+		authType := r.FormValue("authType")
+		switch authType {
+		case "http":
+			//本地认证
+			//username := r.URL.Query().Get("username")
+			//password := r.URL.Query().Get("password")
+			username := r.FormValue("username")
+			password := r.FormValue("password")
+			if username != "" && password != "" {
+				users := hsServer.readUserConf()
+				for _, user := range users.User {
+					value := user[username]
+					if password == value {
+						session, err := store.Get(r, defaultSessionName)
+						if err != nil {
+							http.Error(w, err.Error(), http.StatusInternalServerError)
+							return
+						}
+						userInfo := &UserInfo{
+							Id:       username,
+							Email:    username,
+							Name:     username,
+							NickName: username,
+						}
+						session.Values["user"] = userInfo
+						if err = session.Save(r, w); err != nil {
+							log.Println("session save error:", err)
+							http.Error(w, err.Error(), http.StatusInternalServerError)
+							return
+						}
+						log.Println(username, "login")
 
-					nextUrl := r.FormValue("next")
-					if nextUrl == "" {
-						nextUrl = "/"
+						nextUrl := r.FormValue("next")
+						if nextUrl == "" {
+							nextUrl = "/"
+						}
+						http.Redirect(w, r, nextUrl, http.StatusFound)
+						return
 					}
-					http.Redirect(w, r, nextUrl, http.StatusFound)
-					return
 				}
+			} else {
+				log.Println("username or password empty")
+				http.Error(w, "username or password empty", http.StatusForbidden)
+				return
 			}
-		} else {
+		case "microsoft", "github":
 			//第三方认证 构造登录认证页面的URL
 			http.Redirect(w, r, oauthConfig.AuthCodeURL("state"), http.StatusFound)
 		}
 	}
 }
 
-func handleOAuthCallback(provider string, oauthConfig *oauth2.Config) http.HandlerFunc {
+//func handleOAuthCallback(provider string, oauthConfig *oauth2.Config) http.HandlerFunc {
+func handleOAuthCallback(oauthConfig *oauth2.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		provider := r.URL.Query().Get("provider")
 		code := r.URL.Query().Get("code")
 		token, err := oauthConfig.Exchange(context.Background(), code)
 		if err != nil {
@@ -237,8 +247,8 @@ func handleSysInfo(provider string) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		data, _ := json.Marshal(map[string]interface{}{
-			"version":   VERSION,
-			"auth_type": provider,
+			"version":  VERSION,
+			"AuthType": provider,
 		})
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))

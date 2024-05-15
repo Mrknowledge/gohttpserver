@@ -1332,13 +1332,11 @@ func AuditLog(r *http.Request, msg string) {
 		//ken add method2
 		session, err := store.Get(r, defaultSessionName)
 		if err != nil {
-			log.Println("Get session info err:", err)
-			log.Println(msg)
+			log.Println("Get session info err:", err, msg)
 		} else {
 			val := session.Values["user"]
 			if val == nil {
-				log.Println("Get user info null")
-				log.Println(msg)
+				log.Println("Get user info null.", msg)
 			} else {
 				userInfo := val.(*UserInfo)
 				log.Println(userInfo.Email, "-", msg)

@@ -277,7 +277,7 @@ func main() {
 				TokenURL: "https://github.com/login/oauth/access_token",
 			},
 			//RedirectURL: fmt.Sprintf("http://localhost:8000%s/-/callback", gcfg.Prefix),
-			RedirectURL: fmt.Sprintf("%s%s/-/callback", gcfg.Auth.Redirect, gcfg.Prefix),
+			RedirectURL: fmt.Sprintf("%s%s/-/callback?provider=%s", gcfg.Auth.Redirect, gcfg.Prefix, gcfg.Auth.Type),
 			Scopes:      []string{"user:email"},
 		}
 	case "microsoft":
@@ -289,7 +289,7 @@ func main() {
 				TokenURL: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
 			},
 			//RedirectURL: fmt.Sprintf("http://localhost:8000%s/-/callback", gcfg.Prefix),
-			RedirectURL: fmt.Sprintf("%s%s/-/callback", gcfg.Auth.Redirect, gcfg.Prefix),
+			RedirectURL: fmt.Sprintf("%s%s/-/callback?provider=%s", gcfg.Auth.Redirect, gcfg.Prefix, gcfg.Auth.Type),
 			Scopes:      []string{"openid", "profile", "email"},
 		}
 	case "oauth2-proxy":
@@ -315,8 +315,8 @@ func main() {
 	}
 
 	router.PathPrefix("/-/assets/").Handler(http.StripPrefix(gcfg.Prefix+"/-/", http.FileServer(Assets)))
-	router.HandleFunc("/-/login", handleOAuthLogin(gcfg.Auth.Type, oauthConfig, ss))
-	router.HandleFunc("/-/callback", handleOAuthCallback(gcfg.Auth.Type, oauthConfig))
+	router.HandleFunc("/-/login", handleOAuthLogin(oauthConfig, ss))
+	router.HandleFunc("/-/callback", handleOAuthCallback(oauthConfig))
 	router.HandleFunc("/-/sysinfo", handleSysInfo(gcfg.Auth.Type))
 	router.PathPrefix("/").Handler(hdlr)
 
