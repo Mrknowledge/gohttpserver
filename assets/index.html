@@ -71,6 +71,30 @@
             <div class="third-item-label">Login with github</div>
           </div>
         </div>
+
+        <div class="divider">
+          <span class="divider-text">Or sign in with account</span>
+        </div>
+
+        <div class="account-container">
+          <div>
+            <input
+              type="text"
+              v-model="accountName"
+              placeholder="account name"
+            />
+          </div>
+
+          <div>
+            <input
+              type="password"
+              v-model="accountPassword"
+              placeholder="account password"
+            />
+          </div>
+
+          <button type="button" @click="accountLogin">Sign in</button>
+        </div>
       </div>
     </div>
     <nav class="navbar navbar-default">

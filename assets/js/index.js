@@ -44,6 +44,8 @@ function showErrorMessage(jqXHR) {
 var vm = new Vue({
   el: "#app",
   data: {
+    accountName: undefined,
+    accountPassword: undefined,
     userInfo: [],
     authInfo: { users: [], accessTables: [] },
     currentFileName: "",
@@ -161,6 +163,22 @@ var vm = new Vue({
     });
   },
   methods: {
+    accountLogin: function () {
+      if (this.accountName && this.accountPassword) {
+        $.ajax({
+          url: pathJoin([location.pathname, "/-/login"]),
+          method: "post",
+          data: {
+            username: this.accountName,
+            password: this.accountPassword,
+            provider: "http",
+          },
+          success: function (ret) {
+            location.href = "/";
+          },
+        });
+      }
+    },
     thirdLogin: function (type) {
       if (type === "github") {
         location.href = "/-/login?next=aaa&provider=github";
