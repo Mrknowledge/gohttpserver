@@ -174,31 +174,46 @@ func (s *HTTPStaticServer) hLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
-	ok, err := Validate(w, r)
-	if !ok {
-		http.Error(w, err.Error(), http.StatusForbidden)
-		return
-	}
 
 	path := mux.Vars(r)["path"]
 	realPath := s.getRealPath(r)
 	if r.FormValue("json") == "true" {
+		ok, err := Validate(w, r)
+		if !ok {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 		s.hJSONList(w, r)
 		return
 	}
 
 	if r.FormValue("op") == "info" {
+		ok, err := Validate(w, r)
+		if !ok {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 		s.hInfo(w, r)
 		return
 	}
 
 	//ken add 20231102
 	if r.FormValue("op") == "conf" {
+		ok, err := Validate(w, r)
+		if !ok {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 		s.hConf(w, r)
 		return
 	}
 
 	if r.FormValue("op") == "archive" {
+		ok, err := Validate(w, r)
+		if !ok {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
 		s.hZip(w, r)
 		return
 	}

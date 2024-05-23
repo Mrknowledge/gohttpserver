@@ -32,3 +32,49 @@ div.dropzone {
 #qrcodeCanvas {
     padding-right: 20px;
 }
+
+#loginContainer{
+    position: fixed;
+    z-index: 1000;
+    height: 100vh;
+    width: 100vw;
+    background-color: rgba(215, 214, 214, 0.8);
+}
+#loginContainer .loginBox{
+    position: absolute;
+    left: 50%;
+    top: 120px;
+    transform: translateX(-50%) ;
+    width: 450px;
+    background: #fff;
+    border-radius: 3px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, .1);
+    padding: 35px 35px;
+}
+#loginContainer .loginBox .third-container {
+    color: #888;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    margin-top: 18px;
+}
+#loginContainer .loginBox .third-container .third-item {
+    align-items: center;
+    background: #fff !important;
+    border-radius: 12px !important;
+    box-shadow: 1px 1px 5px 0 rgba(0, 0, 0, .2) !important;
+    display: flex;
+    font-weight: 700;
+    height: 42px !important;
+    margin-bottom: 16px;
+    padding: 0 12px !important;
+}
+#loginContainer .third-container .third-item img {
+    flex: 0 0 20px;
+    height: 20px;
+    width: 20px;
+}
+#loginContainer .third-container .third-item .third-item-label {
+    cursor: default !important;
+    margin-left: 40px;
+}

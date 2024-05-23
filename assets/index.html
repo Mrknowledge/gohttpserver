@@ -63,6 +63,16 @@
   </head>
 
   <body id="app">
+    <div id="loginContainer" v-show="showLogin">
+      <div class="loginBox">
+        <div class="third-container">
+          <div class="third-item" @click="thirdLogin('github')">
+            <img src="[[.Prefix]]/-/assets/imgs/github.png" alt="" />
+            <div class="third-item-label">Login with github</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <nav class="navbar navbar-default">
       <div class="container">
         <div class="container">

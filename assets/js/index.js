@@ -32,7 +32,12 @@ function showErrorMessage(jqXHR) {
   if (errMsg == null) {
     errMsg = jqXHR.responseText;
   }
-  alert(String(jqXHR.status).concat(":", errMsg));
+
+  if (["403"].includes(String(jqXHR.status))) {
+    document.querySelector("#loginContainer").style.display = "block";
+  } else {
+    alert(String(jqXHR.status).concat(":", errMsg));
+  }
   console.error(errMsg);
 }
 
@@ -156,6 +161,11 @@ var vm = new Vue({
     });
   },
   methods: {
+    thirdLogin: function (type) {
+      if (type === "github") {
+        location.href = "/-/login?next=aaa&provider=github";
+      }
+    },
     nameSortFunc: function () {
       this.nameSort = !this.nameSort;
       if (this.nameSort) {
@@ -413,6 +423,13 @@ var vm = new Vue({
     },
 
     logout: function () {
+      $.ajax({
+        url: pathJoin([location.pathname, "/-/logout"]),
+        method: "get",
+        success: function (ret) {
+          console.log(ret);
+        },
+      });
       url = location.href;
       const protocol = location.protocol + "//";
       var str = url.replace(protocol, protocol + new Date().getTime() + "@");
