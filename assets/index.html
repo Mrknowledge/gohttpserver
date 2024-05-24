@@ -66,9 +66,22 @@
     <div id="loginContainer" v-show="showLogin">
       <div class="loginBox">
         <div class="third-container">
-          <div class="third-item" @click="thirdLogin('github')">
+          <div
+            class="third-item"
+            @click="thirdLogin('github')"
+            v-show="AuthType.includes('github')"
+          >
             <img src="[[.Prefix]]/-/assets/imgs/github.png" alt="" />
             <div class="third-item-label">Login with github</div>
+          </div>
+
+          <div
+            class="third-item"
+            @click="thirdLogin('microsoft')"
+            v-show="AuthType.includes('microsoft')"
+          >
+            <img src="[[.Prefix]]/-/assets/imgs/microsoft.png" alt="" />
+            <div class="third-item-label">Login with microsoft</div>
           </div>
         </div>
 

@@ -65,6 +65,7 @@ var vm = new Vue({
       contentHTML: "",
     },
     version: "loading",
+    AuthType: "",
     mtimeTypeFromNow: false, // or fromNow
     auth: {},
     search: getQueryString("search"),
@@ -182,6 +183,8 @@ var vm = new Vue({
     thirdLogin: function (type) {
       if (type === "github") {
         location.href = "/-/login?next=aaa&provider=github";
+      } else if (type === "microsoft") {
+        location.href = "/-/login?next=aaa&provider=microsoft";
       }
     },
     nameSortFunc: function () {
@@ -664,6 +667,7 @@ $(function () {
   // update version
   $.getJSON("/-/sysinfo", function (res) {
     vm.version = res.version;
+    vm.AuthType = res.AuthType;
   });
 
   var clipboard = new Clipboard(".btn");
