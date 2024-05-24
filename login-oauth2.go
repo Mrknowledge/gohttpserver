@@ -147,7 +147,7 @@ func handleOpenId(provider string, oauthConfig *oauth2.Config) {
 func handleOAuthLogin(oauthConfig *oauth2.Config, hsServer *HTTPStaticServer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		provider := r.FormValue("provider")
-		log.Println("xxxx", provider)
+		log.Println("provider", provider)
 		switch provider {
 		case "http":
 			//本地认证
