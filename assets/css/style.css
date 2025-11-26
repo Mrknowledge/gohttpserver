@@ -33,6 +33,10 @@ div.dropzone {
     padding-right: 20px;
 }
 
+#loginContainer[v-cloak] {
+    display: none;
+}
+
 #loginContainer{
     position: fixed;
     z-index: 1000;

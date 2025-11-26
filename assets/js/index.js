@@ -34,7 +34,12 @@ function showErrorMessage(jqXHR) {
   }
 
   if (["403"].includes(String(jqXHR.status))) {
-    document.querySelector("#loginContainer").style.display = "block";
+    if (typeof vm !== "undefined" && vm) {
+      vm.showLogin = true;
+    } else {
+      var el = document.querySelector("#loginContainer");
+      if (el) el.style.display = "block";
+    }
   } else {
     alert(String(jqXHR.status).concat(":", errMsg));
   }
@@ -46,6 +51,7 @@ var vm = new Vue({
   data: {
     accountName: undefined,
     accountPassword: undefined,
+    showLogin: false,
     userInfo: [],
     authInfo: { users: [], accessTables: [] },
     currentFileName: "",
