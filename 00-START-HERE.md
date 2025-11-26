@@ -8,7 +8,7 @@
 
 现在通过 `superAdmin` 字段实现细粒度权限控制，并引入 `editAuth` 用于控制 Auth Config 的编辑：
 - **普通管理员** (`editAuth=true, superAdmin=false`) → 只能编辑 Auth Config
-- **超级管理员** (`delete=true, superAdmin=true`) → 能编辑 Auth Config 和 User Config
+- **超级管理员** (`delete=true, superAdmin=true`) → 能编辑 User Config；是否能编辑 Auth Config 取决于是否同时拥有 `editAuth`（建议同时为超级管理员配置 `editAuth: true` 如果你希望其也能编辑 Auth Config）
 
 ## 🎯 实现内容
 
