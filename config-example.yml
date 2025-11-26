@@ -1,0 +1,177 @@
+# 示例配置：SuperAdmin 权限系统
+# 这是一个完整的 .ghs.yml 配置示例，展示如何设置不同权限的用户
+
+# User Config - HTTP 基本认证的用户和密码
+# 这是最基础的认证信息，任何能访问的人都可以看到这个列表
+# 实际密码应该更复杂
+users:
+  - admin@company.com: admin@123
+  - user1@company.com: user1@123
+  - user2@company.com: user2@123
+
+# Auth Config - 更细粒度的访问控制
+# 这部分定义了每个用户可以执行的操作
+show: true
+upload: true
+delete: false
+
+users:
+  # 超级管理员账户
+  # 可以：
+  #  - 查看和编辑 User Config（用户列表和密码）
+  #  - 查看和编辑 Auth Config（权限配置）
+  #  - 执行所有其他操作
+  - email: admin@company.com
+    token: super_admin_token_abc123def456
+    show: true
+    upload: true
+    delete: true
+    superAdmin: true
+    editAuth: true
+    
+  # 普通管理员账户 #1
+  # 可以：
+  #  - 查看和编辑 Auth Config（权限配置）
+  #  - 无法访问 User Config（不能看到或修改用户密码）
+  #  - 执行文件操作（上传、删除等）
+  - email: user1@company.com
+    token: user1_token_xyz789uvw012
+    show: true
+    upload: true
+    delete: true
+    superAdmin: false
+    editAuth: true
+    
+  # 普通用户账户
+  # 可以：
+  #  - 查看文件
+  #  - 上传文件
+  #  - 无法删除文件
+  #  - 无法编辑任何配置
+  - email: user2@company.com
+    token: user2_token_ijk345mno678
+    show: true
+    upload: true
+    delete: false
+    superAdmin: false
+    editAuth: false
+
+# 文件访问控制规则
+# 使用正则表达式匹配文件路径
+accessTables:
+  # 例1：只有允许访问以 /public 开头的路径
+  - regex: '^public/'
+    allow: true
+    
+  # 例2：禁止访问隐藏文件和配置文件
+  - regex: '^\.|\.yml$|\.yaml$'
+    allow: false
+    
+  # 例3：允许访问 /shared 目录
+  - regex: '^shared/'
+    allow: true
+
+---
+
+# 下面是一个更复杂的多团队配置示例：
+
+users:
+  # 团队A - 超级管理员
+  - teamA_admin@company.com: teamA_admin_pwd
+  # 团队A - 成员
+  - teamA_user1@company.com: teamA_user1_pwd
+  - teamA_user2@company.com: teamA_user2_pwd
+  
+  # 团队B - 超级管理员
+  - teamB_admin@company.com: teamB_admin_pwd
+  # 团队B - 成员
+  - teamB_user1@company.com: teamB_user1_pwd
+
+show: true
+upload: false
+delete: false
+
+users:
+  # 团队A超级管理员 - 可以管理团队A的所有事务
+  - email: teamA_admin@company.com
+    token: teamA_admin_token_001
+    show: true
+    upload: true
+    delete: true
+    superAdmin: true
+    editAuth: true
+    
+  # 团队A成员 - 有上传权限，但不能删除
+  - email: teamA_user1@company.com
+    token: teamA_user1_token_002
+    show: true
+    upload: true
+    delete: false
+    superAdmin: false
+    editAuth: false
+    
+  # 团队A成员 - 只读
+  - email: teamA_user2@company.com
+    token: teamA_user2_token_003
+    show: true
+    upload: false
+    delete: false
+    superAdmin: false
+    editAuth: false
+    
+  # 团队B超级管理员
+  - email: teamB_admin@company.com
+    token: teamB_admin_token_004
+    show: true
+    upload: true
+    delete: true
+    superAdmin: true
+    editAuth: true
+    
+  # 团队B成员 - 只读
+  - email: teamB_user1@company.com
+    token: teamB_user1_token_005
+    show: true
+    upload: false
+    delete: false
+    superAdmin: false
+    editAuth: false
+
+accessTables:
+  # 团队A只能访问 /teamA 目录
+  - regex: '^teamA/'
+    allow: true
+    
+  # 团队B只能访问 /teamB 目录
+  - regex: '^teamB/'
+    allow: true
+    
+  # 禁止所有人访问隐藏文件
+  - regex: '^\.'
+    allow: false
+
+---
+
+# 权限管理清单：
+
+# 用户权限说明：
+# 
+# show: true/false
+#   - 显示文件列表
+#
+# upload: true/false
+#   - 上传文件
+#
+# delete: true/false
+#   - 删除文件
+#   - 创建新文件夹
+#
+# editAuth: true/false
+#   - 查看 Auth Config（权限配置）
+#   - 编辑 Auth Config（权限配置）
+#
+# superAdmin: true/false
+#   - 需要 delete=true 才生效
+#   - 查看 User Config（用户列表和密码）
+#   - 编辑 User Config（修改用户列表和密码）
+
