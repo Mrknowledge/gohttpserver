@@ -384,6 +384,11 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
 
 			log.Println(string(decodedContent))
 			if r.FormValue("type") == "user" {
+				// Only SuperAdmin can save User Config
+				if !auth.canEditUserConfig(r) {
+					http.Error(w, "User config edit forbidden", http.StatusForbidden)
+					return
+				}
 				if !s.saveUserConf(decodedContent) {
 					http.Error(w, "save content failed", http.StatusInternalServerError)
 					return
@@ -674,6 +679,11 @@ func (s *HTTPStaticServer) hConf(w http.ResponseWriter, r *http.Request) {
 
 	var data []byte
 	if r.FormValue("type") == "user" {
+		// Only SuperAdmin can view/edit User Config
+		if !auth.canEditUserConfig(r) {
+			http.Error(w, "User config access forbidden", http.StatusForbidden)
+			return
+		}
 		user := s.readUserConf()
 		//mask user password
 		for _, u := range user.User {
@@ -839,18 +849,20 @@ type AccessTable struct {
 type UserControl struct {
 	Email string
 	// Access bool
-	Show   bool
-	Upload bool
-	Delete bool
-	Token  string
+	Show       bool
+	Upload     bool
+	Delete     bool
+	SuperAdmin bool `yaml:"superAdmin" json:"superAdmin"`
+	Token      string
 }
 
 type AccessConf struct {
-	Show         bool          `yaml:"show" json:"show"`
-	Upload       bool          `yaml:"upload" json:"upload"`
-	Delete       bool          `yaml:"delete" json:"delete"`
-	Users        []UserControl `yaml:"users" json:"users"`
-	AccessTables []AccessTable `yaml:"accessTables"`
+	Show              bool          `yaml:"show" json:"show"`
+	Upload            bool          `yaml:"upload" json:"upload"`
+	Delete            bool          `yaml:"delete" json:"delete"`
+	CanEditUserConfig bool          `yaml:"-" json:"canEditUserConfig"`
+	Users             []UserControl `yaml:"users" json:"users"`
+	AccessTables      []AccessTable `yaml:"accessTables"`
 }
 
 var reCache = make(map[string]*regexp.Regexp)
@@ -910,6 +922,24 @@ func (c *AccessConf) canDelete(r *http.Request) bool {
 	return c.Delete
 }
 
+func (c *AccessConf) canEditUserConfig(r *http.Request) bool {
+	session, err := store.Get(r, defaultSessionName)
+	if err != nil {
+		return false
+	}
+	val := session.Values["user"]
+	if val == nil {
+		return false
+	}
+	userInfo := val.(*UserInfo)
+	for _, rule := range c.Users {
+		if rule.Email == userInfo.Email {
+			return rule.SuperAdmin
+		}
+	}
+	return false
+}
+
 func (c *AccessConf) canUploadByToken(token string) bool {
 	for _, rule := range c.Users {
 		if rule.Token == token {
@@ -950,6 +980,7 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 	auth.Upload = auth.canUpload(r)
 	auth.Delete = auth.canDelete(r)
 	auth.Show = auth.canShow(r)
+	auth.CanEditUserConfig = auth.canEditUserConfig(r)
 
 	// path string -> info os.FileInfo
 	fileInfoMap := make(map[string]os.FileInfo, 0)

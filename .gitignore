@@ -35,3 +35,12 @@ dist/
 /.idea/gohttpserver.iml
 /.idea/modules.xml
 /.idea/vcs.xml
+/INDEX.md
+/IMPLEMENTATION_SUMMARY.md
+/FINAL_SUMMARY.txt
+/CHANGES.md
+/00-START-HERE.md
+/config-example.yml
+/QUICK_REFERENCE.md
+/SOLUTION_SUMMARY.md
+/SUPERADMIN_SETUP.md
