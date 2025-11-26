@@ -23,7 +23,7 @@ fi
 
 build() {
 	echo "$1 $2 ..."
-	GOOS=$1 GOARCH=$2 go build \
+	CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build \
 		-ldflags "$LDFLAGS" \
 		-o dist/gohttpserver-${3:-""}
 }

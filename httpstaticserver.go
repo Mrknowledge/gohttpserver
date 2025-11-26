@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+
 	//"os/user"
 	"path/filepath"
 	"strconv"
@@ -345,14 +346,42 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
 	if filename == "" {
 		//ken add 20231101
 		op := r.FormValue("op")
-		content := r.FormValue("content")
-		if op == "conf" && content != "" {
-			log.Println(content)
-			decodedContent, err := base64.StdEncoding.DecodeString(content)
-			if err != nil {
+		if op == "conf" {
+			// try get content from form first
+			content := r.FormValue("content")
+			var decodedContent []byte
+
+			if content != "" {
+				if d, err := decodeContentString(content); err == nil {
+					decodedContent = d
+				}
+			}
+
+			// if no content yet, try read body (PUT may send body)
+			if decodedContent == nil {
+				if body, err := ioutil.ReadAll(r.Body); err == nil && len(body) > 0 {
+					if d, err := decodeContentString(string(body)); err == nil {
+						decodedContent = d
+					}
+				}
+			}
+
+			// as a last resort, try raw query parsing to obtain the raw value
+			if decodedContent == nil && r.URL.RawQuery != "" {
+				if vals, err := url.ParseQuery(r.URL.RawQuery); err == nil {
+					if v := vals.Get("content"); v != "" {
+						if d, err := decodeContentString(v); err == nil {
+							decodedContent = d
+						}
+					}
+				}
+			}
+
+			if decodedContent == nil {
 				http.Error(w, "content decode failed", http.StatusBadRequest)
 				return
 			}
+
 			log.Println(string(decodedContent))
 			if r.FormValue("type") == "user" {
 				if !s.saveUserConf(decodedContent) {
@@ -366,9 +395,10 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			w.Write([]byte("save config success"))
-		} else {
-			http.Error(w, "filename empty", http.StatusForbidden)
+			return
 		}
+
+		http.Error(w, "filename empty", http.StatusForbidden)
 		return
 	}
 	if err = checkFilename(filename); err != nil {
@@ -1205,6 +1235,40 @@ func (s *HTTPStaticServer) saveUserConf(content []byte) bool {
 	return true
 }
 
+// decodeContentString 尝试对前端传入的 content 字符串做容错解码。
+// 支持以下情况：
+// - URL 转义的字符串，会先做 QueryUnescape
+// - 空格被替换为 '+' 的 base64（把空格替换回 '+'）
+// - 直接 base64 编码后的字符串
+// - 直接传入的 YAML 文本（包含 ':' 或换行）
+func decodeContentString(s string) ([]byte, error) {
+	if s == "" {
+		return nil, fmt.Errorf("empty content")
+	}
+
+	// try to unescape percent-encoding if present
+	if us, err := url.QueryUnescape(s); err == nil {
+		s = us
+	}
+
+	// some clients may have '+' turned into space, try to recover
+	if strings.Contains(s, " ") && !strings.Contains(s, "\n") {
+		s = strings.ReplaceAll(s, " ", "+")
+	}
+
+	// try base64 decode first
+	if data, err := base64.StdEncoding.DecodeString(s); err == nil {
+		return data, nil
+	}
+
+	// if it looks like YAML (contains ':' or newline) treat it as raw text
+	if strings.Contains(s, "\n") || strings.Contains(s, ":") {
+		return []byte(s), nil
+	}
+
+	return nil, fmt.Errorf("cannot decode content")
+}
+
 func deepPath(basedir, name string) string {
 	// loop max 5, in case of for loop not finished
 	maxDepth := 5
@@ -1327,7 +1391,6 @@ func Validate(w http.ResponseWriter, r *http.Request) (bool, error) {
 		} else {
 			return false, errors.New("not logged in")
 		}
-		return false, nil
 	}
 
 	return true, nil

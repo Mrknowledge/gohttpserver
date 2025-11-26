@@ -5,8 +5,6 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
-	"github.com/goji/httpauth"
-	"golang.org/x/oauth2"
 	"io/ioutil"
 	"log"
 	"net"
@@ -19,10 +17,14 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/goji/httpauth"
+	"golang.org/x/oauth2"
+
 	"github.com/alecthomas/kingpin"
 	accesslog "github.com/codeskyblue/go-accesslog"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+
 	//"github.com/go-yaml/yaml"
 	"gopkg.in/yaml.v3"
 )
@@ -71,7 +73,8 @@ var (
 	VERSION   = "unknown"
 	BUILDTIME = "unknown time"
 	GITCOMMIT = "unknown git commit"
-	SITE      = "https://github.com/codeskyblue/gohttpserver"
+	// SITE      = "https://github.com/codeskyblue/gohttpserver"
+	SITE = "Http File Server"
 )
 
 func versionMessage() string {

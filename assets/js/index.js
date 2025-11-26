@@ -117,6 +117,22 @@ var vm = new Vue({
             });
 
             var html = converter.makeHtml(res);
+
+            // 修正图片路径：为相对路径加上当前目录前缀
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            var imgs = tempDiv.querySelectorAll('img');
+            // 获取当前目录（以 / 结尾）
+            var basePath = location.pathname.replace(/[^\/]+$/, '');
+            imgs.forEach(function(img) {
+              var src = img.getAttribute('src');
+              // 只处理相对路径（不以 / 或 http 开头）
+              if (src && !/^([a-z]+:)?\/\//i.test(src) && src[0] !== '/') {
+                img.setAttribute('src', basePath + src);
+              }
+            });
+            html = tempDiv.innerHTML;
+
             that.preview.contentHTML = html;
           },
           error: function (err) {
@@ -429,7 +445,7 @@ var vm = new Vue({
 
     setConfig: function (type, content) {
       const typeStr = type === "user" ? `&type=${type}` : "";
-      const contentStr = `&content=${window.btoa(jsyaml.dump(content))}`;
+      const contentStr = `&content=${encodeURIComponent(window.btoa(jsyaml.dump(content)))}`;
       $.ajax({
         url: pathJoin([location.pathname, "?op=conf" + typeStr + contentStr]),
         method: "PUT",
