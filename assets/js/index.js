@@ -423,6 +423,7 @@ var vm = new Vue({
         show: false,
         upload: false,
         delete: false,
+        editAuth: false,
       });
     },
 

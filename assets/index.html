@@ -250,7 +250,7 @@
 
                   <button
                     class="btn btn-xs btn-default"
-                    v-show="auth.delete"
+                    v-show="auth.canEditAuthConfig"
                     @click="viewConfig('auth')"
                   >
                     Auth Config <i class="fa fa-gear"></i>
@@ -660,8 +660,8 @@
                   <div class="col-sm-2 bg-white">users:</div>
                 </div>
                 <div class="row">
-                  <div class="col-sm-3 bg-white">email</div>
-                  <div class="col-sm-5 bg-white">token</div>
+                  <div class="col-sm-2 bg-white">email</div>
+                  <div class="col-sm-3 bg-white">token</div>
                   <div class="col-sm-1 bg-white" style="padding-left: 0">
                     show
                   </div>
@@ -671,13 +671,16 @@
                   <div class="col-sm-1 bg-white" style="padding-left: 0">
                     delete
                   </div>
+                  <div class="col-sm-1 bg-white" style="padding-left: 0">
+                    editAuth
+                  </div>
                 </div>
                 <div
                   class="row"
                   style="margin-bottom: 8px"
                   v-for="userItem in authInfo.users"
                 >
-                  <div class="col-sm-3 bg-white">
+                  <div class="col-sm-2 bg-white">
                     <input
                       type="text"
                       class="form-control"
@@ -685,7 +688,7 @@
                       placeholder="email"
                     />
                   </div>
-                  <div class="col-sm-5 bg-white">
+                  <div class="col-sm-3 bg-white">
                     <input
                       type="text"
                       class="form-control"
@@ -720,6 +723,17 @@
                       class="form-control"
                       v-model="userItem.delete "
                       placeholder="delete"
+                      style="padding-left: 4px; padding-right: 4px"
+                    >
+                      <option v-bind:value="true">true</option>
+                      <option v-bind:value="false">false</option>
+                    </select>
+                  </div>
+                  <div class="col-sm-1 bg-white" style="padding-left: 0">
+                    <select
+                      class="form-control"
+                      v-model="userItem.editAuth"
+                      placeholder="editAuth"
                       style="padding-left: 4px; padding-right: 4px"
                     >
                       <option v-bind:value="true">true</option>
