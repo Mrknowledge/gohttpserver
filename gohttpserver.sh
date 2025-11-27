@@ -4,7 +4,64 @@ set -e
 
 # Configuration
 PROGRAM="gohttpserver"
-BINARY_PATH="./dist/gohttpserver-linux-amd64-1.1.2"
+
+# Detect OS and architecture
+detect_binary() {
+    local os=""
+    local arch=""
+    local binary_name=""
+    
+    # Detect OS
+    case "$(uname -s)" in
+        Linux*)
+            os="linux"
+            ;;
+        Darwin*)
+            os="darwin"
+            ;;
+        MINGW*|MSYS*|CYGWIN*)
+            os="windows"
+            ;;
+        *)
+            log_error "Unsupported OS: $(uname -s)"
+            exit 1
+            ;;
+    esac
+    
+    # Detect architecture
+    case "$(uname -m)" in
+        x86_64|amd64)
+            arch="amd64"
+            ;;
+        aarch64|arm64)
+            arch="arm64"
+            ;;
+        armv7l|arm)
+            arch="armv7"
+            ;;
+        i386|i686)
+            arch="386"
+            ;;
+        *)
+            log_error "Unsupported architecture: $(uname -m)"
+            exit 1
+            ;;
+    esac
+    
+    # Build binary name
+    if [ "$os" = "windows" ]; then
+        binary_name="gohttpserver-${os}-${arch}.exe"
+    else
+        binary_name="gohttpserver-${os}-${arch}"
+    fi
+    
+    BINARY_PATH="./dist/${binary_name}"
+    
+    log_info "Detected OS: $os, Architecture: $arch"
+    log_info "Binary: $BINARY_PATH"
+}
+
+# Configuration
 LOG_FILE="${PROGRAM}.log"
 PID_FILE="${PROGRAM}.pid"
 
@@ -38,8 +95,12 @@ log_warn() {
 
 # Check if binary exists
 check_binary() {
+    detect_binary
+    
     if [ ! -f "$BINARY_PATH" ]; then
         log_error "Binary not found: $BINARY_PATH"
+        log_error "Please make sure to build the binary for your system:"
+        log_error "  go build -o dist/gohttpserver-linux-amd64 ."
         exit 1
     fi
 }
@@ -210,7 +271,6 @@ Examples:
     $0 help
 
 Configuration:
-    Binary:             $BINARY_PATH
     Log file:           $LOG_FILE
     PID file:           $PID_FILE
     
@@ -220,18 +280,27 @@ Configuration:
     - Address:          $ADDR
     - Auth type:        $AUTH_TYPE
 
+Supported Systems:
+    OS:         Linux, macOS (Darwin), Windows
+    Arch:       x86_64 (amd64), aarch64 (arm64), armv7, i386
+
+Build for your system:
+    go build -o dist/gohttpserver-\$(go env GOOS)-\$(go env GOARCH) .
+
 EOF
 }
 
 # Main command dispatcher
 case "${1:-help}" in
     start)
+        check_binary
         start_service
         ;;
     stop)
         stop_service
         ;;
     restart)
+        check_binary
         restart_service
         ;;
     status)
