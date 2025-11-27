@@ -1,2 +1,30 @@
+show: true
 upload: true
-delete: false
+delete: true
+
+users:
+  - email: admin@example.com
+    token: admin_token
+    show: true
+    upload: true
+    delete: true
+    superAdmin: true
+    editAuth: true
+
+  - email: user1@example.com
+    token: user1_token
+    show: true
+    upload: true
+    delete: true
+    superAdmin: false
+    editAuth: true
+
+  - email: user2@example.com
+    token: user2_token
+    show: true
+    upload: false
+    delete: false
+    superAdmin: false
+    editAuth: true
+
+accessTables: []

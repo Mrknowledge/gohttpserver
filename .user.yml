@@ -1,0 +1,4 @@
+users:
+  - admin@example.com: adminpass
+  - user1@example.com: user1pass
+  - user2@example.com: user2pass

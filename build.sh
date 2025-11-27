@@ -29,7 +29,7 @@ build() {
 }
 
 #build linux arm linux-arm-$VERSION
-build darwin amd64 mac-amd64-$VERSION
+build darwin amd64 darwin-amd64-$VERSION
 build linux amd64 linux-amd64-$VERSION
 #build linux 386 linux-386-$VERSION
 #build windows amd64 win-amd64.exe-$VERSION

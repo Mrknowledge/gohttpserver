@@ -50,9 +50,9 @@ detect_binary() {
     
     # Build binary name
     if [ "$os" = "windows" ]; then
-        binary_name="gohttpserver-${os}-${arch}.exe"
+        binary_name="gohttpserver-${os}-${arch}-1.1.2.exe"
     else
-        binary_name="gohttpserver-${os}-${arch}"
+        binary_name="gohttpserver-${os}-${arch}-1.1.2"
     fi
     
     BINARY_PATH="./dist/${binary_name}"

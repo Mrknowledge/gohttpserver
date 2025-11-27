@@ -336,10 +336,6 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
 	realPath := s.getRealPath(r)
 	// path = filepath.Clean(path) // for safe reason, prevent path contain ..
 	auth := s.readAccessConf(realPath)
-	if !auth.canDelete(r) {
-		http.Error(w, "Rename forbidden", http.StatusForbidden)
-		return
-	}
 
 	// TODO: path safe check
 	filename := r.FormValue("filename")
@@ -394,7 +390,12 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			} else {
-				if !s.saveAccessConf(realPath, decodedContent) {
+				// Require edit-auth permission for saving Auth Config (separate from delete)
+				if !auth.canEditAuthConfig(r) {
+					http.Error(w, "Auth config edit forbidden", http.StatusForbidden)
+					return
+				}
+				if !s.saveAccessConf(r, realPath, decodedContent) {
 					http.Error(w, "save content failed", http.StatusInternalServerError)
 					return
 				}
@@ -404,6 +405,11 @@ func (s *HTTPStaticServer) hRename(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.Error(w, "filename empty", http.StatusForbidden)
+		return
+	}
+
+	if !auth.canDelete(r) {
+		http.Error(w, "Rename forbidden", http.StatusForbidden)
 		return
 	}
 	if err = checkFilename(filename); err != nil {
@@ -672,10 +678,6 @@ func (s *HTTPStaticServer) hConf(w http.ResponseWriter, r *http.Request) {
 	realPath := s.getRealPath(r)
 	// path = filepath.Clean(path) // for safe reason, prevent path contain ..
 	auth := s.readAccessConf(realPath)
-	if !auth.canDelete(r) {
-		http.Error(w, "Read conf forbidden", http.StatusForbidden)
-		return
-	}
 
 	var data []byte
 	if r.FormValue("type") == "user" {
@@ -693,7 +695,33 @@ func (s *HTTPStaticServer) hConf(w http.ResponseWriter, r *http.Request) {
 		}
 		data, _ = yaml.Marshal(user)
 	} else {
-		data, _ = yaml.Marshal(auth)
+		// Require auth-edit permission for Auth Config (separate from delete)
+		if !auth.canEditAuthConfig(r) {
+			http.Error(w, "Auth config access forbidden", http.StatusForbidden)
+			return
+		}
+		// Build a public view that does not contain superAdmin at all
+		pub := PublicAccessConf{
+			Show:              auth.Show,
+			Upload:            auth.Upload,
+			Delete:            auth.Delete,
+			EditAuth:          auth.EditAuth,
+			CanEditUserConfig: auth.CanEditUserConfig,
+			CanEditAuthConfig: auth.CanEditAuthConfig,
+			AccessTables:      auth.AccessTables,
+		}
+		for _, u := range auth.Users {
+			pu := PublicUserControl{
+				Email:    u.Email,
+				Show:     u.Show,
+				Upload:   u.Upload,
+				Delete:   u.Delete,
+				EditAuth: u.EditAuth,
+				Token:    u.Token,
+			}
+			pub.Users = append(pub.Users, pu)
+		}
+		data, _ = yaml.Marshal(pub)
 	}
 	w.Header().Set("Content-Type", "application/x-yaml")
 	w.Write(data)
@@ -853,6 +881,7 @@ type UserControl struct {
 	Upload     bool
 	Delete     bool
 	SuperAdmin bool `yaml:"superAdmin" json:"superAdmin"`
+	EditAuth   bool `yaml:"editAuth" json:"editAuth"`
 	Token      string
 }
 
@@ -860,9 +889,33 @@ type AccessConf struct {
 	Show              bool          `yaml:"show" json:"show"`
 	Upload            bool          `yaml:"upload" json:"upload"`
 	Delete            bool          `yaml:"delete" json:"delete"`
+	EditAuth          bool          `yaml:"editAuth" json:"editAuth"`
 	CanEditUserConfig bool          `yaml:"-" json:"canEditUserConfig"`
+	CanEditAuthConfig bool          `yaml:"-" json:"canEditAuthConfig"`
 	Users             []UserControl `yaml:"users" json:"users"`
 	AccessTables      []AccessTable `yaml:"accessTables"`
+}
+
+// PublicUserControl 敏感字段 superAdmin 不会出现在对外响应中
+type PublicUserControl struct {
+	Email    string `yaml:"email" json:"email"`
+	Show     bool   `yaml:"show" json:"show"`
+	Upload   bool   `yaml:"upload" json:"upload"`
+	Delete   bool   `yaml:"delete" json:"delete"`
+	EditAuth bool   `yaml:"editAuth" json:"editAuth"`
+	Token    string `yaml:"token" json:"token"`
+}
+
+// PublicAccessConf 用于对前端暴露，不包含 superAdmin 字段
+type PublicAccessConf struct {
+	Show              bool                `yaml:"show" json:"show"`
+	Upload            bool                `yaml:"upload" json:"upload"`
+	Delete            bool                `yaml:"delete" json:"delete"`
+	EditAuth          bool                `yaml:"editAuth" json:"editAuth"`
+	CanEditUserConfig bool                `yaml:"-" json:"canEditUserConfig"`
+	CanEditAuthConfig bool                `yaml:"-" json:"canEditAuthConfig"`
+	Users             []PublicUserControl `yaml:"users" json:"users"`
+	AccessTables      []AccessTable       `yaml:"accessTables"`
 }
 
 var reCache = make(map[string]*regexp.Regexp)
@@ -940,6 +993,24 @@ func (c *AccessConf) canEditUserConfig(r *http.Request) bool {
 	return false
 }
 
+func (c *AccessConf) canEditAuthConfig(r *http.Request) bool {
+	session, err := store.Get(r, defaultSessionName)
+	if err != nil {
+		return c.EditAuth
+	}
+	val := session.Values["user"]
+	if val == nil {
+		return c.EditAuth
+	}
+	userInfo := val.(*UserInfo)
+	for _, rule := range c.Users {
+		if rule.Email == userInfo.Email {
+			return rule.EditAuth
+		}
+	}
+	return c.EditAuth
+}
+
 func (c *AccessConf) canUploadByToken(token string) bool {
 	for _, rule := range c.Users {
 		if rule.Token == token {
@@ -981,6 +1052,7 @@ func (s *HTTPStaticServer) hJSONList(w http.ResponseWriter, r *http.Request) {
 	auth.Delete = auth.canDelete(r)
 	auth.Show = auth.canShow(r)
 	auth.CanEditUserConfig = auth.canEditUserConfig(r)
+	auth.CanEditAuthConfig = auth.canEditAuthConfig(r)
 
 	// path string -> info os.FileInfo
 	fileInfoMap := make(map[string]os.FileInfo, 0)
@@ -1194,9 +1266,9 @@ func (s *HTTPStaticServer) readUserConf() (uc Users) {
 }
 
 //ken add 20231101
-func (s *HTTPStaticServer) saveAccessConf(realPath string, content []byte) bool {
-	var data AccessConf
-	err := yaml.Unmarshal([]byte(content), &data)
+func (s *HTTPStaticServer) saveAccessConf(r *http.Request, realPath string, content []byte) bool {
+	var incoming AccessConf
+	err := yaml.Unmarshal([]byte(content), &incoming)
 	if err != nil {
 		log.Printf("error parsing YMAL %s : %v", content, err)
 		return false
@@ -1211,13 +1283,99 @@ func (s *HTTPStaticServer) saveAccessConf(realPath string, content []byte) bool 
 	}
 	cfgFile := filepath.Join(realPath, YAMLCONF)
 
-	err = ioutil.WriteFile(cfgFile, []byte(content), 0644)
+	// Read existing config to preserve backend-only fields like SuperAdmin
+	var existing AccessConf
+	if data, err := ioutil.ReadFile(cfgFile); err == nil {
+		if err := yaml.Unmarshal(data, &existing); err != nil {
+			log.Printf("warning: failed to parse existing %s : %v", cfgFile, err)
+		}
+	}
+
+	// Build map of existing users by email for quick lookup
+	existMap := make(map[string]UserControl)
+	for _, u := range existing.Users {
+		if u.Email != "" {
+			existMap[u.Email] = u
+		}
+	}
+
+	// Build incoming map for diff calculation
+	incomingMap := make(map[string]UserControl)
+	for _, u := range incoming.Users {
+		if u.Email != "" {
+			incomingMap[u.Email] = u
+		}
+	}
+
+	// For each incoming user, preserve SuperAdmin from existing user when present.
+	// Also, do not accept SuperAdmin from frontend for new users: default to false.
+	for i := range incoming.Users {
+		email := incoming.Users[i].Email
+		if email == "" {
+			incoming.Users[i].SuperAdmin = false
+			continue
+		}
+		if eu, ok := existMap[email]; ok {
+			incoming.Users[i].SuperAdmin = eu.SuperAdmin
+		} else {
+			incoming.Users[i].SuperAdmin = false
+		}
+	}
+
+	// Compute diffs for audit
+	var changes []string
+	// added or modified
+	for email, iu := range incomingMap {
+		if eu, ok := existMap[email]; !ok {
+			changes = append(changes, fmt.Sprintf("Added user %s (show=%v upload=%v delete=%v editAuth=%v)", email, iu.Show, iu.Upload, iu.Delete, iu.EditAuth))
+		} else {
+			var diffs []string
+			if eu.Show != iu.Show {
+				diffs = append(diffs, fmt.Sprintf("show:%v->%v", eu.Show, iu.Show))
+			}
+			if eu.Upload != iu.Upload {
+				diffs = append(diffs, fmt.Sprintf("upload:%v->%v", eu.Upload, iu.Upload))
+			}
+			if eu.Delete != iu.Delete {
+				diffs = append(diffs, fmt.Sprintf("delete:%v->%v", eu.Delete, iu.Delete))
+			}
+			if eu.EditAuth != iu.EditAuth {
+				diffs = append(diffs, fmt.Sprintf("editAuth:%v->%v", eu.EditAuth, iu.EditAuth))
+			}
+			if eu.Token != iu.Token {
+				diffs = append(diffs, fmt.Sprintf("token:%s->%s", eu.Token, iu.Token))
+			}
+			// Note: SuperAdmin is preserved from eu, so change should not come from frontend
+			if len(diffs) > 0 {
+				changes = append(changes, fmt.Sprintf("Modified user %s (%s)", email, strings.Join(diffs, ", ")))
+			}
+		}
+	}
+	// removed
+	for email := range existMap {
+		if _, ok := incomingMap[email]; !ok {
+			changes = append(changes, fmt.Sprintf("Removed user %s", email))
+		}
+	}
+
+	// Emit audit log if there are changes
+	if len(changes) > 0 {
+		AuditLog(r, fmt.Sprintf("Auth config changed: %s", strings.Join(changes, "; ")))
+	}
+
+	// Marshal the merged config and write to file (overwrite)
+	contentM, err := yaml.Marshal(&incoming)
 	if err != nil {
-		log.Printf("error save YMAL %s : %v", content, err)
+		log.Printf("error marshal YMAL: %v", err)
+		return false
+	}
+	err = ioutil.WriteFile(cfgFile, contentM, 0644)
+	if err != nil {
+		log.Printf("error save YMAL %s : %v", contentM, err)
 		return false
 	}
 
-	log.Printf("save YMAL %s ok", content)
+	log.Printf("save YMAL %s ok", cfgFile)
 	return true
 }
 

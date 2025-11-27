@@ -438,29 +438,84 @@ var vm = new Vue({
     },
 
     editAuthInfo: function () {
-      const resTemp = {
-        ...this.authInfo,
-        users: this.authInfo?.users?.filter(
-          (item) => !!item?.email?.trim() && !!item?.token?.trim()
-        ),
-        accessTables: this.authInfo?.accessTables?.filter(
-          (item) => !!item?.regex?.trim()
-        ),
-      };
-      this.setConfig("auth", resTemp);
+      try {
+        console.log("editAuthInfo clicked", this.authInfo);
+
+        // Build a clean payload (avoid spreading Vue observed object directly)
+        const users = (this.authInfo && Array.isArray(this.authInfo.users))
+          ? this.authInfo.users
+              .filter(function (item) {
+                return item && String(item.email || "").trim() && String(item.token || "").trim();
+              })
+              .map(function (item) {
+                return {
+                  email: String(item.email || "").trim(),
+                  token: String(item.token || "").trim(),
+                  show: Boolean(item.show),
+                  upload: Boolean(item.upload),
+                  delete: Boolean(item.delete),
+                  editAuth: Boolean(item.editAuth),
+                };
+              })
+          : [];
+
+        const accessTables = (this.authInfo && Array.isArray(this.authInfo.accessTables))
+          ? this.authInfo.accessTables
+              .filter(function (item) {
+                return item && String(item.regex || "").trim();
+              })
+              .map(function (item) {
+                return {
+                  regex: String(item.regex || ""),
+                  allow: Boolean(item.allow),
+                };
+              })
+          : [];
+
+        const resTemp = {
+          show: Boolean(this.authInfo && this.authInfo.show),
+          upload: Boolean(this.authInfo && this.authInfo.upload),
+          delete: Boolean(this.authInfo && this.authInfo.delete),
+          users: users,
+          accessTables: accessTables,
+        };
+
+        // call setConfig with a safe payload
+        this.setConfig("auth", resTemp);
+      } catch (e) {
+        console.error("editAuthInfo error:", e);
+        alert("Failed to apply auth config: " + String(e));
+      }
     },
 
     setConfig: function (type, content) {
       const typeStr = type === "user" ? `&type=${type}` : "";
-      const contentStr = `&content=${encodeURIComponent(window.btoa(jsyaml.dump(content)))}`;
+      const yamlContent = jsyaml.dump(content);
+      console.log(`[setConfig] type=${type}, yaml=`, yamlContent);
+      // btoa fails on unicode strings in some browsers - handle UTF-8 safely
+      let base64 = null;
+      try {
+        base64 = window.btoa(unescape(encodeURIComponent(yamlContent)));
+      } catch (err) {
+        try {
+          base64 = window.btoa(yamlContent);
+        } catch (err2) {
+          console.error("base64 encode failed", err, err2);
+          alert("Failed to encode config content for sending. See console for details.");
+          return;
+        }
+      }
+      const contentStr = `&content=${encodeURIComponent(base64)}`;
       $.ajax({
         url: pathJoin([location.pathname, "?op=conf" + typeStr + contentStr]),
         method: "PUT",
-        success: function () {
+        success: function (response) {
+          console.log(`[setConfig] success response:`, response);
           $("#edit-user-modal").modal("hide");
           $("#edit-auth-modal").modal("hide");
         },
         error: function (jqXHR, textStatus, errorThrown) {
+          console.error(`[setConfig] error:`, textStatus, errorThrown, jqXHR);
           showErrorMessage(jqXHR);
         },
       });
